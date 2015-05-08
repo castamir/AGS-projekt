@@ -54,7 +54,7 @@ Ciele:
 .
 */
 /* Zavolanie rychleho agenta: Na pozicii GoX, GoY je surovina, ja tam idem, a dojdi tam aj ty, nech mozeme zobrat surovinu.
-Zo zadania:  Pro uspìšné sebrání suroviny z dané pozice musí být na stejné pozici alespoò jeden spøátelený agent.
+Zo zadania:  Pro usp?n? sebr?n? suroviny z dan? pozice mus? b?t na stejn? pozici alespo? jeden sp??telen? agent.
 +step(X): carrying_gold(Gold) & carrying_wood(Wood) & ((Gold + Wood) = 0) & friend(F) & ((F = "aFast") | (F = "bFast")) & 
 	found(Stuff,GoX,GoY) & pos(PosX, PosY) & ((Stuff = wood) | (Stuff = gold)) & (carrying_capacity \== 2 )<-
 	!goSomewhere(GoX,GoY);
@@ -250,4 +250,5 @@ Zo zadania:  Pro uspìšné sebrání suroviny z dané pozice musí být na stejné pozic
 	else { if(can_go(D)) { !doMove(D); }}}}
 .
 // ------ END -----
+
 
