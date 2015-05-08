@@ -1,4 +1,10 @@
 /*
+Commit #8:
+Nefunguje posun agenta na poziciu [X,Y], ked je PosX = X (alebo PosY = Y) a v ceste su prekazky aspon z dvoch smerov - 
+agent sa zacne tocit dokola na mieste
+Ale viem co s tym, v dalsom commite to bude zdokumentovane.
+
+Commit #4:
 Nove znalosti o prostredi, ktore sa posielaju ostatnym dvom agentom:
 explored(X,Y) - agent preskumal pole [X,Y] - videl ho
 found(obstacle|gold|wood,X,Y) - na policku [X,Y] je prekazka/zlato/drevo. odosielaju sa zatial len informacie o surovinach
@@ -54,7 +60,7 @@ Ciele:
 .
 */
 /* Zavolanie rychleho agenta: Na pozicii GoX, GoY je surovina, ja tam idem, a dojdi tam aj ty, nech mozeme zobrat surovinu.
-Zo zadania:  Pro uspìšné sebrání suroviny z dané pozice musí být na stejné pozici alespoò jeden spøátelený agent.
+Zo zadania:  Pro uspÃ¬Å¡nÃ© sebrÃ¡nÃ­ suroviny z danÃ© pozice musÃ­ bÃ½t na stejnÃ© pozici alespoÃ² jeden spÃ¸Ã¡telenÃ½ agent.
 +step(X): carrying_gold(Gold) & carrying_wood(Wood) & ((Gold + Wood) = 0) & friend(F) & ((F = "aFast") | (F = "bFast")) & 
 	found(Stuff,GoX,GoY) & pos(PosX, PosY) & ((Stuff = wood) | (Stuff = gold)) & (carrying_capacity \== 2 )<-
 	!goSomewhere(GoX,GoY);
