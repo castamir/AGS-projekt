@@ -42,12 +42,10 @@ calc_next_move(PX,NY,down)  :-  pos(PX,PY) & destination(DX,DY) & PY < DY & NY =
 	?calc_next_move(NX,NY,D);
 	-last_checked(_,_); +last_checked(NX,NY);
 	-last_dir(_); +last_dir(D);
-	.print("Prvni - ", DX, ", ", DY, ", ");
 	do(D).
 +!work: free <-
 	?calc_next_move(NX,NY,D);
 	-last_checked(_,_); +last_checked(NX,NY);
 	-last_dir(_); +last_dir(D);
-	.print("Druhy");
 	do(D).
 
