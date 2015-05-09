@@ -5,7 +5,9 @@ last_move(blank).
 
 // init
 !start.
-+!start : grid_size(X, Y) & visibility(C) <-
++!start : .my_name(Name) & grid_size(X, Y) & visibility(C) & friend(F1) & friend(F2) & (F1 \== F2) <-
+	.send(F1, tell, slow_agent(Name));
+	.send(F2, tell, slow_agent(Name));
 	A = math.floor((X-1)/(2*C+1)) + 1;
 	B = math.floor((Y-1)/(2*C+1)) + 1;
 	D = A*B;
@@ -147,6 +149,10 @@ last_move(blank).
 +!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
+
+
+//init
++!action: not middle_agent(_) | not fast_agent(_) <- !action.
 
 +!action: visit_points(V) & max_visit_points(V+1) <-
 	.print("KONEC");

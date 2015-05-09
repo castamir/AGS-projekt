@@ -27,43 +27,55 @@ visibility(1).
 	.send(F2, tell, middle_agent(Name));
 . 
 
-/*+step(0): depot(DX,DY) <-
-	if(not(substep(_))) { +substep(0); }
-	+goSomewhere(DX,DY);
-	!goSomewhere(DX,DY);
-.*/
-
 +step(X) <- !action.
 
-+!action: moves_left(0) <- true. 
+//init
++!action: not slow_agent(_) | not fast_agent(_) <- !action.
+
++!action: moves_left(0) <- true.
+
++!action: just_picked & pos(X,Y) & ally(X,Y) & fast_agent(Name) <-
+	do(transfer, Name, 1);
+	.send(Name, tell, move_on);
+	-just_picked;
+	!action.
 
 +!action: (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) <-
-	do(drop);
-	!action.
+	do(drop).
 
 +!action: (not carrying_gold(0) | not carrying_wood(0)) & depot(PosX,PosY) & not goSomewhere(_,_) & not moves_left(0) <-
 	+goSomewhere(PosX,PosY);
 	if(not(substep(_))) { +substep(0); };
-	!goSomewhere(PosX,PosY);
+	!goSomewhere(PosX,PosY).
+
++!action: pos(PosX, PosY) & (gold(PosX, PosY) | wood(PosX, PosY)) & ally(PosX, PosY) & moves_per_round(M) & not moves_left(M) & step(S) & fast_agent(Name) <-
+	SS = S+1;
+	.send(Name, tell, pick_in(SS));
+	do(skip);
 	!action.
 
 +!action: pos(PosX, PosY) & gold(PosX, PosY) & carrying_gold(Gold) & carrying_wood(0) &
-	carrying_capacity(Cap) & (Gold <= Cap) & ally(PosX, PosY) & not moves_left(0) <-
+	carrying_capacity(Cap) & (Gold <= Cap) & ally(PosX, PosY) & moves_left(M) & moves_per_round(M) <-
+	+just_picked;
 	do(pick);
-	-found(gold,PosX,PosY);
-	!action.
+	-found(gold,PosX,PosY).
 
 +!action: pos(PosX, PosY) & wood(PosX, PosY) & carrying_gold(0) & carrying_wood(Wood) &
-	carrying_capacity(Cap) & (Wood <= Cap) & ally(PosX, PosY) & not moves_left(0) <-
+	carrying_capacity(Cap) & (Wood <= Cap) & ally(PosX, PosY) & moves_left(M) & moves_per_round(M) <-
+	+just_picked;
 	do(pick);
-	-found(wood,PosX,PosY);
-	!action.
-
-+!action: pos(PosX, PosY) & wood(PosX, PosY) & carrying_gold(0) & carrying_wood(Wood) &
-	carrying_capacity(Cap) & (Wood <= Cap) & ally(PosX, PosY) & moves_left(0) <-
-	true.
+	-found(wood,PosX,PosY).
 
 +!action: goSomewhere(DX, DY) & not moves_left(0) <-
+	.print("aaaaaaaaaaaaa");
+	if(not(substep(_))) { +substep(0); };
+	!goSomewhere(DX,DY);
+	!action.
+	
++!action: not goSomewhere(_,_) & nextGoSomewhere(X,Y) <-
+	.print("qqqqqqqqqqqqqq");
+	-nextGoSomewhere(X,Y);
+	+goSomewhere(X,Y);
 	if(not(substep(_))) { +substep(0); };
 	!goSomewhere(DX,DY);
 	!action.
@@ -136,7 +148,9 @@ visibility(1).
 		{ +can_go(down) } 
 	if(not(obstacle(PosX, PosY - 1)) & ((PosY - 1) >= 0   ) & not(was_on(PosX, PosY - 1, _)))
 		{ +can_go(up) } 
-.                                                           
+.
+
++!getMovement(X,Y) <- !action.
 
 +!goToSpecificPoint(X,Y): grid_size(GridX, GridY) & substep(NowStep) & pos(PosX,PosY) 
 	& was_on(PosX,PosY, PrevStep) & was_on(PosX,PosY, PrevPrevStep) & ((NowStep - PrevStep) > 4) 
@@ -149,9 +163,17 @@ visibility(1).
 	if(PosY = 0) { !doMove(down); }
 	else { +free; !getMovement(X,Y); !goToSpecificPoint(X,Y); }
 .
-+!goToSpecificPoint(X,Y): moves_left(0) <- true.
++!goToSpecificPoint(_,_): moves_left(0) <- true.
 
-+!goToSpecificPoint(X,Y): pos(X, Y) & goSomewhere(X, Y) & grid_size(GridX, GridY) <-
++!goToSpecificPoint(X,Y): pos(X, Y) & step(S) & fast_agent(Name) <-
+	.print("Done!");
+	SS = S+1;
+	.send(Name, tell, pick_in(SS));
+	-goSomewhere(X, Y);
+	.abolish(substep(_));
+	.abolish(was_on(_,_,_));
+	!action.
++!goToSpecificPoint(X,Y): pos(X, Y) <-
 	.print("Done!");
 	-goSomewhere(X, Y);
 	.abolish(substep(_));
