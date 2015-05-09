@@ -1,8 +1,4 @@
 /*
-Commit #10: Pohyb funguje. Otestovane na vsetkom, co ma napadlo.
-Z cyklickych situacii sa agent dostane tak, ze odsleduje druhe prejdenie rovnakou trasou aspon o dlzke 4,
-a potom z nej vyskoci.
-
 explored(X,Y) - agent preskumal pole [X,Y] - videl ho
 found(obstacle|gold|wood,X,Y) - na policku [X,Y] je prekazka/zlato/drevo. odosielaju sa zatial len informacie o surovinach
 substep(X) - step(Y) pocita kola, substep(X) pocita pocet krokov agenta (teda fast ma napr. X = 3*Y) - nutne pre backtracking
@@ -20,6 +16,7 @@ last_move(up|right|left|down) - smer posledneho kroku
 */
 
 visibility(1).
+substep(0).
 
 !start.
 +!start : .my_name(Name) & friend(F1) & friend(F2) & (F1 \== F2) <-
@@ -27,7 +24,7 @@ visibility(1).
 	.send(F2, tell, middle_agent(Name));
 . 
 
-+step(X) <- !action.
++step(X) <- !action; !action.
 
 //init
 +!action: not slow_agent(_) | not fast_agent(_) <- !action.
@@ -40,12 +37,11 @@ visibility(1).
 	-just_picked;
 	!action.
 
-+!action: (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) <-
++!action: (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) & not moves_left(0)<-
 	do(drop).
 
 +!action: (not carrying_gold(0) | not carrying_wood(0)) & depot(PosX,PosY) & not goSomewhere(_,_) & not moves_left(0) <-
 	+goSomewhere(PosX,PosY);
-	if(not(substep(_))) { +substep(0); };
 	!goSomewhere(PosX,PosY).
 
 +!action: pos(PosX, PosY) & (gold(PosX, PosY) | wood(PosX, PosY)) & ally(PosX, PosY) & moves_per_round(M) & not moves_left(M) & step(S) & fast_agent(Name) <-
@@ -67,18 +63,18 @@ visibility(1).
 	-found(wood,PosX,PosY).
 
 +!action: goSomewhere(DX, DY) & not moves_left(0) <-
-	.print("aaaaaaaaaaaaa");
-	if(not(substep(_))) { +substep(0); };
+	//.print("aaaaaaaaaaaaa");
 	!goSomewhere(DX,DY);
-	!action.
+	!action;
+.
 	
 +!action: not goSomewhere(_,_) & nextGoSomewhere(X,Y) <-
-	.print("qqqqqqqqqqqqqq");
+	//.print("qqqqqqqqqqqqqq");
 	-nextGoSomewhere(X,Y);
 	+goSomewhere(X,Y);
-	if(not(substep(_))) { +substep(0); };
 	!goSomewhere(DX,DY);
-	!action.
+	!action;
+.
 
 +!action: not moves_left(0) <-
 	.print("Nothing to do!");
@@ -120,9 +116,9 @@ visibility(1).
 .
 
 +!goSomewhere(X,Y): moves_per_round(0) <- true.
-@goSomewhere[atomic] +!goSomewhere(X,Y): moves_per_round(N) <-
++!goSomewhere(X,Y) <-
 	!getMovement(X,Y); !goToSpecificPoint(X,Y);
-	!goSomewhere(X,Y).
+.
 
 +!getMovement(X,Y): not free & pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) <-
 	.abolish(can_go(_));
@@ -150,8 +146,6 @@ visibility(1).
 		{ +can_go(up) } 
 .
 
-+!getMovement(X,Y) <- !action.
-
 +!goToSpecificPoint(X,Y): grid_size(GridX, GridY) & substep(NowStep) & pos(PosX,PosY) 
 	& was_on(PosX,PosY, PrevStep) & was_on(PosX,PosY, PrevPrevStep) & ((NowStep - PrevStep) > 4) 
 	& ((PrevStep - PrevPrevStep) > 4) & ((NowStep - PrevStep) == (PrevStep - PrevPrevStep)) & not(free)  <-
@@ -165,19 +159,21 @@ visibility(1).
 .
 +!goToSpecificPoint(_,_): moves_left(0) <- true.
 
-+!goToSpecificPoint(X,Y): pos(X, Y) & step(S) & fast_agent(Name) <-
-	.print("Done!");
++!goToSpecificPoint(X,Y): pos(X,Y) & step(S) & fast_agent(Name) & (not carrying_gold(0) & not carrying_wood(0)) <-
+	.print("Synchro with fast");
 	SS = S+1;
 	.send(Name, tell, pick_in(SS));
 	-goSomewhere(X, Y);
-	.abolish(substep(_));
 	.abolish(was_on(_,_,_));
 	!action.
-+!goToSpecificPoint(X,Y): pos(X, Y) <-
-	.print("Done!");
+	
++!goToSpecificPoint(X,Y): pos(X, Y) & (not carrying_gold(0) | not carrying_wood(0)) & depot(DX, DY) & fast_agent(Name) <-
+	.print("Done! Returning to Depot...");
 	-goSomewhere(X, Y);
-	.abolish(substep(_));
+	+goSomewhere(DX, DY);
 	.abolish(was_on(_,_,_));
+	.send(Name, tell, middleAgentComing(DX,DY));
+	.send(Name, untell, middleAgentComing(X,Y));
 	!action.
 
 +!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) &
@@ -245,6 +241,8 @@ visibility(1).
 +!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(left,down,right,up).
 +!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) 				   <- +free; .abolish(returning(_)); !moveOrder(left,up,down,right).
 
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY = Y) 				   <- .abolish(returning(_)); .abolish(goSomewhere(_,_)).
+
 +!moveOrder(D,_,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
@@ -252,6 +250,5 @@ visibility(1).
 // ------ END -----
 
 +!update_target(X,Y) : goSomewhere(PosX,PosY) & depot(PosX,PosY) <- +nextGoSomewhere(X,Y) ; .print("OK 1 ---------------------------------- ").
-+!update_target(X,Y) : goSomewhere(PosX,PosY) <- -goSomewhere(PosX,PosY); +goSomewhere(X,Y); .print("OK 2 ---------------------------------- ").
++!update_target(X,Y) : goSomewhere(PosX,PosY) & fast_agent(Name) <- -goSomewhere(PosX,PosY); +goSomewhere(X,Y); .send(Name, tell, middleAgentComing(X,Y)); .print("OK 2 ---------------------------------- ").
 +!update_target(X,Y) : not goSomewhere(_,_) <- +goSomewhere(X,Y); +free; .print("OK 3 ---------------------------------- ").
-
