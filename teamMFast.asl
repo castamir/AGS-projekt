@@ -110,6 +110,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found_wood(X,Y) & calc_distance(PosX,PosY,
 +!action <-
 	?calc_next_move(X,Y,D);
 	.print("Pujdu do ", X, ", ", Y);
+	+visited_point(X,Y);
 	do(D).
  
 +!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
