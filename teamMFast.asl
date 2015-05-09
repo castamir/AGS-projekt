@@ -46,12 +46,14 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 //init
 +!action: not slow_agent(_) | not middle_agent(_) <- !action.
 
++!action : moves_left(0) <- true.
+
 // prave doslo k vyzvednuti => musim prenest suroviny
-+!action: ( not carrying_gold(0) | not carrying_wood(0)) & not move_on  <- .print("cekam na presun");!action.
++!action: ( not carrying_gold(0) | not carrying_wood(0)) & not move_on  <- !action.
+
 // vyzvednuti s jinym agentem
 +!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & ally(DX,DY) & step(S) & pick_in(S) <-
 	.print("nakladam surovinu");
-	.abolish(destination(_,_));
 	do(pick);
 	-pick_in(S);
 	-found(gold,DX,DY);
@@ -61,38 +63,52 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	.abolish(destination(_,_));
 	+wait_for_transfer;
 	.print("surovina nalozena").
+	
 // cekani na dalsiho agenta
-+!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & not ally(DX,DY) <-
++!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & not ally(DX,DY) & middle_agent(Name) <-
 	.print("ale cekam na kolegu1");
+	if(not(middleAgentComing(DX,DY))) { .send(Name, achieve, update_target(DX,DY)); }
 	do(skip).
-+!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & moves_per_round(M) & not moves_left(M) <-
+	
++!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & moves_per_round(M) & not moves_left(M) & middle_agent(Name) <-
 	.print("ale cekam na kolegu2");
+	if(not(middleAgentComing(DX,DY))) { .send(Name, achieve, update_target(DX,DY)); }
 	do(skip).
+	
 // tady uz nic neni
 +!action: pos(DX,DY) & destination(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & not gold(DX,DY) & not wood(DX,DY) & slow_agent(F1) & middle_agent(F2) <-
 	.print("tady uz nic neni");
-	-found(gold,DX,DY);
-	-found(wood,DX,DY);
+	.abolish(found(gold,DX,DY));
+	.abolish(found(wood,DX,DY));
 	.send(F1, untell, found(gold,DX,DY));
 	.send(F2, untell, found(gold,DX,DY));
 	.send(F1, untell, found(wood,DX,DY));
 	.send(F2, untell, found(wood,DX,DY));
 	-destination(DX,DY);
 	!action.
+
++!action: destination(DX,DY) & pos(DX,DY) & (gold(DX,DY) | wood(DX,DY)) & depot(DepX, DepY) & middle_agent(Name) <-
+	.print("jsem na policku se surovinou");
+	if(not(middleAgentComing(DX,DY))) { .send(Name, achieve, update_target(DepX, DepY)); }
+	do(skip);
+.
+	
 // nasel jsem blizsi zlato
-+!action: destination(DX,DY) & pos(PosX,PosY) & gold(GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G < D & middle_agent(Name) <-
++!action: destination(DX,DY) & pos(PosX,PosY) & found(gold,GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G <= D & middle_agent(Name) <-
 	.print("nasel jsem blizsi cil");
 	.abolish(destination(_,_));
 	+destination(GX,GY);
-	.send(Name, achieve, update_target(GX,GY));
+	if(not(middleAgentComing(GX,GY))) { .send(Name, achieve, update_target(GX,GY)); } 
 	!action.
+	
 // nasel jsem blizsi drevo
-+!action: destination(DX,DY) & pos(PosX,PosY) & wood(GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G < D & middle_agent(Name) <-
++!action: destination(DX,DY) & pos(PosX,PosY) & found(wood,GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G <= D & middle_agent(Name) <-
 	.print("nasel jsem blizsi cil");
 	.abolish(destination(_,_));
 	+destination(GX,GY);
 	.send(Name, achieve, update_target(GX,GY));
 	!action.
+
 // jsem na miste prohledani
 +!action: destination(DX,DY) & pos(DX,DY) <-
 	.print("uz jsem tu...");  
