@@ -1,29 +1,32 @@
-kamen(10,10).
-kamen(20,20).
-kamen(25,25).
-visibility(3).
+visibility(1).
+visit_points(0).
 
 free.
 
 // init
 !start.
-+!start : pos(X,Y)<-
-	+kamen(1,1);
-	+kamen(1,1);
-	.print("Ma pozice je:", X, ", ", Y);
-	.my_name(Name);.print("I am: ", Name);
-	.findall(kamen(A,B),(kamen(A,B)),K);
-	.length(K,KL);
-	.print("Pocet kamenu: ", KL).
++!start : grid_size(X, Y) & visibility(C) <-
+	A = math.floor((X-1)/(2*C+1)) + 1;
+	B = math.floor((Y-1)/(2*C+1)) + 1;
+	D = A*B;
+	+max_visit_points(D).
 
 
 +step(X) <- !inform_friends;!action;!inform_friends;!action;!inform_friends;!action.
 
-+!find_cell_to_explore(X,Y) : grid_size(GridX, GridY) & visibility(C)<-
-	for( .range(CntX,0,GridX-1) ) {
-		for( .range(CntY,0,GridY-1) ) {
-			if( not destination(_,_) & not explored(CntX,CntY)) {
-				+destination(CntX,CntY);
+
++!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C)<-
+	for( .range(CntX,C,GridX-1) ) {
+		for( .range(CntY,C,GridY-1) ) {
+			if( not destination(_,_)) {
+				A = GridX-1-CntX;
+				B = GridY-1-CntY;
+				if (((CntX mod (2*C+1)) == C) & ((CntY mod (2*C+1)) == C) & not(visited_point(A,B))) {
+					+destination(A,B);
+					+visited_point(A,B);
+					W = V + 1;
+					-visit_points(V);+visit_points(W)
+				}
 			}
 		}	
 	}.
@@ -35,26 +38,23 @@ calc_next_move(PX,NY,down)  :-  pos(PX,PY) & destination(DX,DY) & PY < DY & NY =
 
 
 
-+!action: free & not destination(_,_) <- 
-	!find_cell_to_explore(X,Y);
-	-free;
-	!action.
-+!action: not free & not destination(_,_) <-
-	.print("Uz neni kam jit..."); 
++!action: visit_points(V) & max_visit_points(V) <-
+	.print("KONEC");
 	do(skip).
-+!action: destination(DX,DY) & exploded(DX,DY) <-
-	.print("Uz neni kam jit...");  
-	.abolish(destination(_,_));
-	+free;
++!action: not destination(_,_) <-
+	.print("hledam novy cil");  
+	.abolish(destination(_,_)); 
+	!find_cell_to_explore;
 	!action.
 +!action: destination(DX,DY) & pos(DX,DY) <-
 	.print("uz jsem tu...");  
 	.abolish(destination(_,_));
-	+free;
+	!find_cell_to_explore;
 	!action.
 +!action <-
 	?calc_next_move(X,Y,D);
-	.print("Pujdu do ", X, ", ", Y);do(D).
+	.print("Pujdu do ", X, ", ", Y);
+	do(D).
  
 +!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
 	for( .range(CntX,-C,C) ) {
@@ -67,4 +67,13 @@ calc_next_move(PX,NY,down)  :-  pos(PX,PY) & destination(DX,DY) & PY < DY & NY =
 			}
 		}	
 	}.
+
++gold(X,Y) : friend(F1) & friend(F2) & (F1 \== F2) <-
+	+found_gold(X,Y);
+	.send(F1, tell, found_gold(X,Y));
+	.send(F2, tell, found_gold(X,Y)).
++wood(X,Y) : friend(F1) & friend(F2) & (F1 \== F2) <-
+	+found_wood(X,Y);
+	.send(F1, tell, found_wood(X,Y));
+	.send(F2, tell, found_wood(X,Y)).
 	

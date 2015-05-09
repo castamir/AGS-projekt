@@ -1,51 +1,80 @@
+visibility(3).
+visit_points(0).
 
-// beliefs
-
-last_dir(right).
-last_checked(null,null).
-area(0,0,5,5).
 free.
-
 
 // init
 !start.
-+!start: pos(X,Y) & area(X1,Y1,X2,Y2) <-
-	+destination(X2,Y1);
-	-last_checked(_,_);	+last_checked(X,Y).
++!start : grid_size(X, Y) & visibility(C) <-
+	A = math.floor((X-1)/(2*C+1)) + 1;
+	B = math.floor((Y-1)/(2*C+1)) + 1;
+	D = A*B;
+	+max_visit_points(D).
 	
-+step(A) <- !work.
-	
-// last area
-calc_next_check(X2,Y1) :- area(X1,Y1,X2,Y2) & last_checked(X2,Y2) & last_dir(right).
-calc_next_check(X1,Y1) :- area(X1,Y1,X2,Y2) & last_checked(X1,Y2) & last_dir(left).
-// last in row
-calc_next_check(X2,NY) :- area(_,_,X2,Y2) & last_checked(X2,LY) & last_dir(right) & LY < Y2 & NY = LY+1.
-calc_next_check(X1,NY) :- area(X1,_,_,Y2) & last_checked(X1,LY) & last_dir(left)  & LY < Y2 & NY = LY+1.
-// next row
-calc_next_check(X2,LY) :- area(X1,_,X2,_) & last_checked(X1,LY) & last_dir(down).
-calc_next_check(X1,LY) :- area(X1,_,X2,_) & last_checked(X2,LY) & last_dir(down).
-// else
-calc_next_check(NX,LY) :- last_checked(LX,LY) & not last_dir(left) & NX = LX+1.
-calc_next_check(NX,LY) :- last_checked(LX,LY) & not last_dir(right)  & NX = LX-1.
 
+
++step(X) <- !inform_friends;!action.
+
++!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C) & visit_points(V) <-
+	for( .range(CntX,C,GridX-1) ) {
+		for( .range(CntY,C,GridY-1) ) {
+			if( not destination(_,_)) {
+				A = CntX;
+				B = CntY;
+				if (((CntX mod (2*C+1)) == C) & ((CntY mod (2*C+1)) == C) & not(visited_point(A,B))) {
+					+destination(A,B);
+					+visited_point(A,B);
+					W = V + 1;
+					-visit_points(V);+visit_points(W)
+				}
+			}
+		}	
+	}.
 // next direction and its position
 calc_next_move(NX,PY,left)  :-  pos(PX,PY) & destination(DX,DY) & PX > DX & NX = PX-1.
 calc_next_move(NX,PY,right) :-  pos(PX,PY) & destination(DX,DY) & PX < DX & NX = PX+1.
 calc_next_move(PX,NY,up)    :-  pos(PX,PY) & destination(DX,DY) & PY > DY & NY = PY-1.
 calc_next_move(PX,NY,down)  :-  pos(PX,PY) & destination(DX,DY) & PY < DY & NY = PY+1.
+ 
 
 
 
-+!work: free & destination(X,Y) & pos(X,Y) <-
-	?calc_next_check(DX,DY);
-	-destination(_,_); +destination(DX,DY);
-	?calc_next_move(NX,NY,D);
-	-last_checked(_,_); +last_checked(NX,NY);
-	-last_dir(_); +last_dir(D);
++!action: visit_points(V) & max_visit_points(V) <-
+	.print("KONEC")
+	do(skip).
++!action: not destination(_,_) <-
+	.print("hledam novy cil");  
+	.abolish(destination(_,_)); 
+	!find_cell_to_explore;
+	!action.
++!action: destination(DX,DY) & pos(DX,DY) <-
+	.print("uz jsem tu...");  
+	.abolish(destination(_,_));
+	!find_cell_to_explore;
+	!action.
++!action <-
+	?calc_next_move(X,Y,D);
+	.print("Pujdu do ", X, ", ", Y);
 	do(D).
-+!work: free <-
-	?calc_next_move(NX,NY,D);
-	-last_checked(_,_); +last_checked(NX,NY);
-	-last_dir(_); +last_dir(D);
-	do(D).
 
++!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
+	for( .range(CntX,-C,C) ) {
+		for( .range(CntY,-C,C) ) {
+			if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
+				A = PosX + CntX; B = PosY + CntY;
+				+explored(A, B);
+				.send(F1, tell, explored(A,B));
+				.send(F2, tell, explored(A,B));
+			}
+		}	
+	}.
+
++gold(X,Y) : friend(F1) & friend(F2) & (F1 \== F2) <-
+	+found_gold(X,Y);
+	.send(F1, tell, found_gold(X,Y));
+	.send(F2, tell, found_gold(X,Y)).
++wood(X,Y) : friend(F1) & friend(F2) & (F1 \== F2) <-
+	+found_wood(X,Y);
+	.send(F1, tell, found_wood(X,Y));
+	.send(F2, tell, found_wood(X,Y)).
+	
