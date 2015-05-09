@@ -1,17 +1,10 @@
 /*
-Commit #9:
-Odoslana stara verzia suboru... oprava
+Commit #10: Pohyb funguje. Otestovane na vsetkom, co ma napadlo.
+Z cyklickych situacii sa agent dostane tak, ze odsleduje druhe prejdenie rovnakou trasou aspon o dlzke 4,
+a potom z nej vyskoci.
 
-Commit #8:
-Nefunguje posun agenta na poziciu [X,Y], ked je PosX = X (alebo PosY = Y) a v ceste su prekazky aspon z dvoch smerov - 
-agent sa zacne tocit dokola na mieste
-Ale viem co s tym, v dalsom commite to bude zdokumentovane.
-
-Nove znalosti o prostredi, ktore sa posielaju ostatnym dvom agentom:
 explored(X,Y) - agent preskumal pole [X,Y] - videl ho
 found(obstacle|gold|wood,X,Y) - na policku [X,Y] je prekazka/zlato/drevo. odosielaju sa zatial len informacie o surovinach
-
-Dalsie znalosti:
 substep(X) - step(Y) pocita kola, substep(X) pocita pocet krokov agenta (teda fast ma napr. X = 3*Y) - nutne pre backtracking
 was_on(X,Y,Z) - agent sa v podkroku (substep) Z nachadzal na pozicii [X,Y]. Po dokonceni ciela sa tieto informacie zmazu.
 can_go(up|right|left|down) - agent sa moze posunut danym smerom - policko je v ramci mriezky a agent na nom este nebol (was_on)
@@ -19,7 +12,6 @@ returning(Step) - agent sa od kroku Step vracia naspat po svojich krokoch, podla
 gold(X,Y); wood(X,Y), obstacle(X,Y) - na [X,Y] je zlato/drevo/prekazka
 last_move(up|right|left|down) - smer posledneho kroku
 
-Ciele:
 !goSomewhere(X,Y) - spojene so znalostou goSomewhere(X,Y): agent ide na poziciu [X,Y]. sklada sa len z cielov getMovement a goToSpecificPoint.
 !getMovement(X,Y) - zisti, na ktore policka okolo agenta je mozne prejst pomocou do(Direction) do was_on
 !goToSpecificPoint(X,Y) - 
@@ -39,8 +31,8 @@ Ciele:
 
 +step(0): depot(DX,DY) <- 
 	if(not(substep(_))) { +substep(0); }
-	+goSomewhere(30,30);
-	!goSomewhere(30,30);
+	+goSomewhere(DX,DY);
+	!goSomewhere(DX,DY);
 .
 
 +step(X): pos(PosX, PosY) & gold(PosX, PosY) & carrying_gold(Gold) & carrying_wood(Wood) &
@@ -55,20 +47,6 @@ Ciele:
 	-found(wood,PosX,PosY);
 .
 
-/* Odlozenie surovin v Depote
-+step(X): pos(PosX, PosY) & depot(PosX, PosY) & carrying_gold(Gold) & carrying_wood(Wood) &
-	((Gold >= 0) | (Wood >= 0)) <- 
-	do(drop);
-.
-*/
-/* Zavolanie rychleho agenta: Na pozicii GoX, GoY je surovina, ja tam idem, a dojdi tam aj ty, nech mozeme zobrat surovinu.
-Zo zadania:  Pro uspěšné sebrání suroviny z dané pozice musí být na stejné pozici alespoň jeden spřátelený agent.
-+step(X): carrying_gold(Gold) & carrying_wood(Wood) & ((Gold + Wood) = 0) & friend(F) & ((F = "aFast") | (F = "bFast")) & 
-	found(Stuff,GoX,GoY) & pos(PosX, PosY) & ((Stuff = wood) | (Stuff = gold)) & (carrying_capacity \== 2 )<-
-	!goSomewhere(GoX,GoY);
-	.send(F, achieve, goSomewhere(GoX,GoY));
-.
-*/
 +step(X): goSomewhere(DX, DY) <-
 	!goSomewhere(DX,DY);
 .
@@ -96,11 +74,6 @@ Zo zadania:  Pro uspěšné sebrání suroviny z dané pozice musí být na stej
 	.send(F2, tell, found(gold,X,Y));
 .
 
-+!doMove(Direction): not free & substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
-	-substep(S); +substep(S + 1);
-	.abolish(last_move(_)); +last_move(Direction);
-	do(Direction).
-	
 +!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
 	-substep(S); +substep(S + 1);
 	.abolish(last_move(_));
@@ -146,6 +119,7 @@ Zo zadania:  Pro uspěšné sebrání suroviny z dané pozice musí být na stej
 	!getMovement(X,Y); !goToSpecificPoint(X,Y);
 .
 
+
 +!getMovement(X,Y): not free & pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) <-
 	.abolish(can_go(_));
 	+was_on(PosX, PosY, Step);
@@ -170,6 +144,18 @@ Zo zadania:  Pro uspěšné sebrání suroviny z dané pozice musí být na stej
 		{ +can_go(down) } 
 	if(not(obstacle(PosX, PosY - 1)) & ((PosY - 1) >= 0   ) & not(was_on(PosX, PosY - 1, _)))
 		{ +can_go(up) } 
+.                                                           
+
++!goToSpecificPoint(X,Y): grid_size(GridX, GridY) & substep(NowStep) & pos(PosX,PosY) 
+	& was_on(PosX,PosY, PrevStep) & was_on(PosX,PosY, PrevPrevStep) & ((NowStep - PrevStep) > 4) 
+	& ((PrevStep - PrevPrevStep) > 4) & ((NowStep - PrevStep) == (PrevStep - PrevPrevStep)) & not(free)  <-
+	.print("SHIT");
+	//!getMovement(X,Y);
+	if(PosX = (GridX - 1)) { !doMove(left); }
+	if(PosX = 0) {!doMove(right); }
+	if(PosY = (GridY - 1))  { !doMove(up); }
+	if(PosY = 0) { !doMove(down); }
+	else { +free; !getMovement(X,Y); !goToSpecificPoint(X,Y); }
 .
 
 +!goToSpecificPoint(X,Y): pos(PosX, PosY) & grid_size(GridX, GridY) & moves_left(Moves) &
@@ -202,50 +188,52 @@ Zo zadania:  Pro uspěšné sebrání suroviny z dané pozice musí být na stej
 // ***************  DEFAULT MOVEMENT *****************
 // up -> right -> left -> down
 // UP + LEFT
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX > X) & (PosY > Y) & last_move(down)  <- .abolish(returning(_)); !moveOrder(left,down,up,right).
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX > X) & (PosY > Y) & last_move(right) <- .abolish(returning(_)); !moveOrder(up,right,left,down).
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX > X) & (PosY > Y)                    <- .abolish(returning(_)); !moveOrder(up,left,right,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY > Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(left,down,up,right).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY > Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(up,right,left,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY > Y)                    <- -free; .abolish(returning(_)); !moveOrder(up,left,right,down).
 
 // DOWN + LEFT	
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX > X) & (PosY < Y) & last_move(up)    <- .abolish(returning(_)); !moveOrder(left,up,down,right).
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX > X) & (PosY < Y) & last_move(right) <- .abolish(returning(_)); !moveOrder(down,right,left,up).
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX > X) & (PosY < Y)                    <- .abolish(returning(_)); !moveOrder(down,left,right,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY < Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(left,up,down,right).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY < Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(down,right,left,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY < Y)                    <- -free; .abolish(returning(_)); !moveOrder(down,left,right,up).
 
 // UP + RIGHT
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX < X) & (PosY > Y) & last_move(down)  <- .abolish(returning(_)); !moveOrder(right,down,up,left).
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX < X) & (PosY > Y) & last_move(left)  <- .abolish(returning(_)); !moveOrder(up,left,right,down).
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX < X) & (PosY > Y)                    <- .abolish(returning(_)); !moveOrder(up,right,left,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY > Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(right,down,up,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY > Y) & last_move(left)  <- -free; .abolish(returning(_)); !moveOrder(up,left,right,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY > Y)                    <- -free; .abolish(returning(_)); !moveOrder(up,right,left,down).
 
 // DOWN + RIGHT
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX < X) & (PosY < Y) & last_move(up)    <- .abolish(returning(_)); !moveOrder(right,up,down,left).
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX < X) & (PosY < Y) & last_move(left)  <- .abolish(returning(_)); !moveOrder(down,left,right,up).
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX < X) & (PosY < Y)                    <- .abolish(returning(_)); !moveOrder(down,right,left,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY < Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(right,up,down,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY < Y) & last_move(left)  <- -free; .abolish(returning(_)); !moveOrder(down,left,right,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY < Y)                    <- -free; .abolish(returning(_)); !moveOrder(down,right,left,up).
 
+// UP
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY > Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(right,left,down,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY > Y) & last_move(left)  <- +free; .abolish(returning(_)); !moveOrder(up,left,down,right).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY > Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(up,right,down,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY > Y) 				   <- +free; .abolish(returning(_)); !moveOrder(up,right,left,down).
 
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosX = X) <-
-	.abolish(returning(_));
-	
-	if(PosY < Y) {
-		!moveOrder(down,right,left,up);
-	}
-	if(PosY > Y) {
-		!moveOrder(up,left,right,down);
-	}
-.
+// DOWN
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY < Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(right,left,up,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY < Y) & last_move(left)  <- -free; .abolish(returning(_)); !moveOrder(down,left,right,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY < Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(down,right,up,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY < Y) 				   <- +free; .abolish(returning(_)); !moveOrder(down,left,right,up).
 
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & last_move(Last) & (PosY = Y) <-
-	.abolish(returning(_));
-	
-	if(PosX < X) {
-		!moveOrder(right,down,up,left);
-	}
-	if(PosX > X) {
-		!moveOrder(left,up,down,right);
-	}
-.
+// RIGHT
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY = Y) & last_move(left)  <- -free; .abolish(returning(_)); !moveOrder(up,down,left,right).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY = Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(right,up,left,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY = Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(right,down,left,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY = Y) 				   <- +free; .abolish(returning(_)); !moveOrder(right,up,down,left).
+
+// LEFT
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(up,down,right,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(left,up,right,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(left,down,right,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) 				   <- +free; .abolish(returning(_)); !moveOrder(left,up,down,right).
 
 +!moveOrder(D,_,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
 // ------ END -----
+
