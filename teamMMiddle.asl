@@ -37,8 +37,11 @@ substep(0).
 	-just_picked;
 	!action.
 
-+!action: (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) & not moves_left(0)<-
++!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & M >= CG+CW<-
 	do(drop).
+
++!action: (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) & not moves_left(0)<-
+	do(skip).
 
 +!action: (not carrying_gold(0) | not carrying_wood(0)) & depot(PosX,PosY) & not goSomewhere(_,_) & not moves_left(0) <-
 	+goSomewhere(PosX,PosY);

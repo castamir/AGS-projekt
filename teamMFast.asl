@@ -140,11 +140,13 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	.print("KONEC");
 	do(skip).
 // pohyb
-+!action <-
++!action : not moves_left(0) <-
 	?calc_next_move(X,Y,D);
 	.print("Pujdu do ", X, ", ", Y);
 	+visited_point(X,Y);
 	do(D).
+
++!action <- true.
  
 +!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
 	for( .range(CntX,-C,C) ) {
