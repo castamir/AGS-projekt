@@ -19,30 +19,35 @@ last_move(up|right|left|down) - smer posledneho kroku
 !moveOrder(A,B,C,D) - priorita pohybov: ak mozem ist smerom A, idem smerom A. ak nie a ak mozem ist smerom B, idem smerom B...
 */
 
-!start.
-+!start : .my_name(Name) & .substring("a",Name,0) <-
-	+side("a");
-	+last_move(blank);
-. 
-+!start : .my_name(Name) & .substring("b",Name,0) <-
-	+side("b");
-	+last_move(blank);
-.
+visibility(1).
 
-+step(0): depot(DX,DY) <- 
+!start.
++!start : .my_name(Name) & friend(F1) & friend(F2) & (F1 \== F2) <-
+	.send(F1, tell, middle_agent(Name));
+	.send(F2, tell, middle_agent(Name));
+. 
+
+/*+step(0): depot(DX,DY) <-
 	if(not(substep(_))) { +substep(0); }
 	+goSomewhere(DX,DY);
 	!goSomewhere(DX,DY);
-.
+.*/
 
-+step(X): pos(PosX, PosY) & gold(PosX, PosY) & carrying_gold(Gold) & carrying_wood(Wood) &
-	carrying_capacity(Cap) & (Wood = 0) & (Gold <= Cap) & ally(PosX, PosY) <- 
++step(X): (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) <-
+	do(drop).
+
++step(X): (not carrying_gold(0) | not carrying_wood(0)) & depot(PosX,PosY) & not goSomewhere(_,_) &  moves_left(Moves) & Moves > 0 <-
+	+goSomewhere(PosX,PosY);
+	!goSomewhere(PosX,PosY).
+
++step(X): pos(PosX, PosY) & gold(PosX, PosY) & carrying_gold(Gold) & carrying_wood(0) &
+	carrying_capacity(Cap) & (Gold <= Cap) & ally(PosX, PosY) <-
 	do(pick);
 	-found(gold,PosX,PosY);
 .
 
-+step(X): pos(PosX, PosY) & wood(PosX, PosY) & carrying_gold(Gold) & carrying_wood(Wood) &
-	carrying_capacity(Cap) & (Wood <= Cap) & (Gold = 0) & ally(PosX, PosY) <- 
++step(X): pos(PosX, PosY) & wood(PosX, PosY) & carrying_gold(0) & carrying_wood(Wood) &
+	carrying_capacity(Cap) & (Wood <= Cap) & ally(PosX, PosY) <-
 	do(pick);
 	-found(wood,PosX,PosY);
 .
@@ -74,51 +79,28 @@ last_move(up|right|left|down) - smer posledneho kroku
 	.send(F2, tell, found(gold,X,Y));
 .
 
-+!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
++!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) & visibility(V) <-
 	-substep(S); +substep(S + 1);
 	.abolish(last_move(_));
 	+last_move(Direction);
 	do(Direction);
 	
-	if(carrying_capacity > 1) {
-		for( .range(CntX,-1,1) ) {
-			for( .range(CntY,-1,1) ) {
-				if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
-					A = PosX + CntX; B = PosY + CntY;
-					+explored(PosX + CntX, PosY + CntY);
-					.send(F1, tell, explored(A,B));
-					.send(F2, tell, explored(A,B));
-				}
-			}	
-		}
-	}
-	else {
-		for( .range(CntX,-3,3) ) {
-			for( .range(CntY,-3,3) ) {
-				if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
-					A = PosX + CntX; B = PosY + CntY;
-					+explored(PosX + CntX, PosY + CntY);
-					.send(F1, tell, explored(A,B));
-					.send(F2, tell, explored(A,B));
-				}
-			}	
+	for( .range(CntX,-V,V) ) {
+		for( .range(CntY,-V,V) ) {
+			if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
+				A = PosX + CntX; B = PosY + CntY;
+				+explored(PosX + CntX, PosY + CntY);
+				.send(F1, tell, explored(A,B));
+				.send(F2, tell, explored(A,B));
+			}
 		}
 	}
 .
 
-+!goSomewhere(X,Y): moves_per_round(1) <-
++!goSomewhere(X,Y): moves_per_round(0) <- true.
+@goSomewhere[atomic] +!goSomewhere(X,Y): moves_per_round(N) <-
 	!getMovement(X,Y); !goToSpecificPoint(X,Y);
-.
-+!goSomewhere(X,Y): moves_per_round(2) <-
-	!getMovement(X,Y); !goToSpecificPoint(X,Y); 
-	!getMovement(X,Y); !goToSpecificPoint(X,Y);
-.
-+!goSomewhere(X,Y): moves_per_round(3) <- 
-	!getMovement(X,Y); !goToSpecificPoint(X,Y);
-	!getMovement(X,Y); !goToSpecificPoint(X,Y);
-	!getMovement(X,Y); !goToSpecificPoint(X,Y);
-.
-
+	!goSomewhere(X,Y).
 
 +!getMovement(X,Y): not free & pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) <-
 	.abolish(can_go(_));
@@ -237,4 +219,7 @@ last_move(up|right|left|down) - smer posledneho kroku
 +!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
 // ------ END -----
 
++!update_target(X,Y) : goSomewhere(PosX,PosY) & depot(PosX,PosY) <- +nextGoSomewhere(X,Y) ; .print("OK 1 ---------------------------------- ").
++!update_target(X,Y) : goSomewhere(PosX,PosY) <- -goSomewhere(PosX,PosY); +goSomewhere(X,Y); .print("OK 2 ---------------------------------- ").
++!update_target(X,Y) : not goSomewhere(_,_) <- +goSomewhere(X,Y); .print("OK 3 ---------------------------------- ").
 
