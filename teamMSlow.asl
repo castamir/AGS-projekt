@@ -188,10 +188,10 @@ last_move(blank).
 	}.
 
 +gold(X,Y) : friend(F1) & friend(F2) & (F1 \== F2) <-
-	+found_gold(X,Y);
-	.send(F1, tell, found_gold(X,Y));
-	.send(F2, tell, found_gold(X,Y)).
+	+found(gold,X,Y);
+	.send(F1, tell, found(gold,X,Y));
+	.send(F2, tell, found(gold,X,Y)).
 +wood(X,Y) : friend(F1) & friend(F2) & (F1 \== F2) <-
-	+found_wood(X,Y);
-	.send(F1, tell, found_wood(X,Y));
-	.send(F2, tell, found_wood(X,Y)).
+	+found(wood,X,Y);
+	.send(F1, tell, found(wood,X,Y));
+	.send(F2, tell, found(wood,X,Y)).
