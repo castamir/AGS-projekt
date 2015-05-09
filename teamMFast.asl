@@ -71,10 +71,11 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found_wood(X,Y) & calc_distance(PosX,PosY,
 	.send(Name, achieve, update_target(GX,GY));
 	!action.
 // nasel jsem blizsi drevo
-+!action: destination(DX,DY) & pos(PosX,PosY) & wood(GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G < D <-
++!action: destination(DX,DY) & pos(PosX,PosY) & wood(GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G < D & middle_agent(Name) <-
 	.print("nasel jsem blizsi cil");
 	.abolish(destination(_,_));
 	+destination(GX,GY);
+	.send(Name, achieve, update_target(GX,GY));
 	!action.
 // jsem na miste prohledani
 +!action: destination(DX,DY) & pos(DX,DY) <-

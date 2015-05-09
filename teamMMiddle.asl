@@ -33,35 +33,45 @@ visibility(1).
 	!goSomewhere(DX,DY);
 .*/
 
-+step(X): (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) <-
-	do(drop).
++step(X) <- !action.
 
-+step(X): (not carrying_gold(0) | not carrying_wood(0)) & depot(PosX,PosY) & not goSomewhere(_,_) &  moves_left(Moves) & Moves > 0 <-
++!action: moves_left(0) <- true. 
+
++!action: (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) <-
+	do(drop);
+	!action.
+
++!action: (not carrying_gold(0) | not carrying_wood(0)) & depot(PosX,PosY) & not goSomewhere(_,_) & not moves_left(0) <-
 	+goSomewhere(PosX,PosY);
-	!goSomewhere(PosX,PosY).
+	if(not(substep(_))) { +substep(0); };
+	!goSomewhere(PosX,PosY);
+	!action.
 
-+step(X): pos(PosX, PosY) & gold(PosX, PosY) & carrying_gold(Gold) & carrying_wood(0) &
-	carrying_capacity(Cap) & (Gold <= Cap) & ally(PosX, PosY) <-
++!action: pos(PosX, PosY) & gold(PosX, PosY) & carrying_gold(Gold) & carrying_wood(0) &
+	carrying_capacity(Cap) & (Gold <= Cap) & ally(PosX, PosY) & not moves_left(0) <-
 	do(pick);
 	-found(gold,PosX,PosY);
-.
+	!action.
 
-+step(X): pos(PosX, PosY) & wood(PosX, PosY) & carrying_gold(0) & carrying_wood(Wood) &
-	carrying_capacity(Cap) & (Wood <= Cap) & ally(PosX, PosY) <-
++!action: pos(PosX, PosY) & wood(PosX, PosY) & carrying_gold(0) & carrying_wood(Wood) &
+	carrying_capacity(Cap) & (Wood <= Cap) & ally(PosX, PosY) & not moves_left(0) <-
 	do(pick);
 	-found(wood,PosX,PosY);
-.
+	!action.
 
-+step(X): goSomewhere(DX, DY) <-
++!action: pos(PosX, PosY) & wood(PosX, PosY) & carrying_gold(0) & carrying_wood(Wood) &
+	carrying_capacity(Cap) & (Wood <= Cap) & ally(PosX, PosY) & moves_left(0) <-
+	true.
+
++!action: goSomewhere(DX, DY) & not moves_left(0) <-
+	if(not(substep(_))) { +substep(0); };
 	!goSomewhere(DX,DY);
-.
+	!action.
 
-+step(X): moves_left(Moves) <- 
++!action: not moves_left(0) <-
 	.print("Nothing to do!");
-	if(Moves = 3) { do(skip); do(skip); do(skip); }
-	if(Moves = 2) { do(skip); do(skip); }
-	if(Moves = 1) { do(skip); } 
-.
+	do(skip);
+	!action.
 
 +obstacle(X,Y): not(found(obstacle,X,Y)) <-
 	+found(obstacle,X,Y);
@@ -139,14 +149,14 @@ visibility(1).
 	if(PosY = 0) { !doMove(down); }
 	else { +free; !getMovement(X,Y); !goToSpecificPoint(X,Y); }
 .
++!goToSpecificPoint(X,Y): moves_left(0) <- true.
 
-+!goToSpecificPoint(X,Y): pos(PosX, PosY) & grid_size(GridX, GridY) & moves_left(Moves) &
-	(PosX = X) & (PosY = Y) <-
++!goToSpecificPoint(X,Y): pos(X, Y) & goSomewhere(X, Y) & grid_size(GridX, GridY) <-
 	.print("Done!");
-	-goSomewhere(GoX, GoY);
+	-goSomewhere(X, Y);
+	.abolish(substep(_));
 	.abolish(was_on(_,_,_));
-	 do(skip);
-. 
+	!action.
 
 +!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) &
 	not(can_go(left)) & not(can_go(right)) & not(can_go(up)) & not(can_go(down)) & not(returning(_)) <-
@@ -221,5 +231,5 @@ visibility(1).
 
 +!update_target(X,Y) : goSomewhere(PosX,PosY) & depot(PosX,PosY) <- +nextGoSomewhere(X,Y) ; .print("OK 1 ---------------------------------- ").
 +!update_target(X,Y) : goSomewhere(PosX,PosY) <- -goSomewhere(PosX,PosY); +goSomewhere(X,Y); .print("OK 2 ---------------------------------- ").
-+!update_target(X,Y) : not goSomewhere(_,_) <- +goSomewhere(X,Y); .print("OK 3 ---------------------------------- ").
++!update_target(X,Y) : not goSomewhere(_,_) <- +goSomewhere(X,Y); +free; .print("OK 3 ---------------------------------- ").
 
