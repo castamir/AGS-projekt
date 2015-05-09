@@ -40,7 +40,7 @@ calc_next_move(PX,NY,down)  :-  pos(PX,PY) & destination(DX,DY) & PY < DY & NY =
 
 
 +!action: visit_points(V) & max_visit_points(V) <-
-	.print("KONEC")
+	.print("KONEC");
 	do(skip).
 +!action: not destination(_,_) <-
 	.print("hledam novy cil");  
