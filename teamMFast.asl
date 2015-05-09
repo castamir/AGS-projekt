@@ -12,15 +12,15 @@ free.
 	+max_visit_points(D).
 
 
-+step(X) <- !inform_friends;!action;!inform_friends;!action;!inform_friends;!action.
++step(X) <- -picking;!inform_friends;!action;!inform_friends;!action;!inform_friends;!action.
 
 
 +!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C)<-
 	for( .range(CntX,C,GridX-1) ) {
 		for( .range(CntY,C,GridY-1) ) {
 			if( not destination(_,_)) {
-				A = GridX-1-CntX;
-				B = GridY-1-CntY;
+				A = CntX;
+				B = CntY;
 				if (((CntX mod (2*C+1)) == C) & ((CntY mod (2*C+1)) == C) & not(visited_point(A,B))) {
 					+destination(A,B);
 					+visited_point(A,B);
@@ -36,21 +36,53 @@ calc_next_move(NX,PY,right) :-  pos(PX,PY) & destination(DX,DY) & PX < DX & NX =
 calc_next_move(PX,NY,up)    :-  pos(PX,PY) & destination(DX,DY) & PY > DY & NY = PY-1.
 calc_next_move(PX,NY,down)  :-  pos(PX,PY) & destination(DX,DY) & PY < DY & NY = PY+1.
 
+calc_distance(PosX,PosY,X,Y,D) :- D = math.abs(PosX - X) + math.abs(PosY-Y).
 
+find_nearest_gold(D,PosX,PosY,X,Y) :- found_gold(X,Y) & calc_distance(PosX,PosY,X,Y,D).
+find_nearest_wood(D,PosX,PosY,X,Y) :- found_wood(X,Y) & calc_distance(PosX,PosY,X,Y,D).
 
-+!action: visit_points(V) & max_visit_points(V) <-
-	.print("KONEC");
+// vyzvednuti s jinym agentem
++!action: destination(DX,DY) & pos(DX,DY) & ( found_gold(DX,DY) | found_wood(DX,DY) ) & friend(DX,DY) <-
+	.print("nakladam surovinu");
+	.abolish(destination(_,_));
+	do(pick);
+	+picking;
+	.print("surovina nalozena").
+// cekani na dalsiho agenta
++!action: destination(DX,DY) & pos(DX,DY) & ( found_gold(DX,DY) | found_wood(DX,DY) ) <-
+	.print("ale cekam na kolegu");
 	do(skip).
-+!action: not destination(_,_) <-
-	.print("hledam novy cil");  
-	.abolish(destination(_,_)); 
-	!find_cell_to_explore;
-	!action.
+// jsem na miste prohledani
 +!action: destination(DX,DY) & pos(DX,DY) <-
 	.print("uz jsem tu...");  
 	.abolish(destination(_,_));
 	!find_cell_to_explore;
 	!action.
+// novy cil - zlato
++!action: not destination(_,_) & found_gold(_,_) & pos(PosX,PosY)  <-
+	.print("zmena cile -> zlato");
+	.findall(D,(found_gold(A,B) & calc_distance(PosX,PosY,A,B,D)),Distances);
+	.min(Distances,Min);
+	?find_nearest_gold(Min,PosX,PosY,A,B);
+	+destination(A,B);
+	!action.
+// novy cil - drevo
+/*+!action: not destination(_,_) & found_wood(_,_) & pos(PosX,PosY)  <-
+	.print("zmena cile -> drevo");
+	.findall(D,(found_wood(A,B) & calc_distance(PosX,PosY,A,B,D)),Distances);
+	.min(Distances,Min);
+	?find_nearest_wood(Min,PosX,PosY,A,B);
+	+destination(A,B);
+	!action.*/
+// novy cil - prohledavani mapy
++!action: not destination(_,_) & visit_points(V) & max_visit_points(W) & V < W <-
+	!find_cell_to_explore;
+	!action.
+// mapa prohledana, suroviny posbirany
++!action: visit_points(V) & max_visit_points(V) & not destination(_,_) & not found_gold(_,_) & not found_wood(_,_) <-
+	.print("KONEC");
+	do(skip).
+// pohyb
 +!action <-
 	?calc_next_move(X,Y,D);
 	.print("Pujdu do ", X, ", ", Y);
