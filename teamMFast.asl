@@ -69,11 +69,13 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 +!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & not ally(DX,DY) & middle_agent(Name) <-
 	.print("ale cekam na kolegu1");
 	if(not(middleAgentComing(DX,DY))) { .send(Name, achieve, update_target(DX,DY)); }
+	.abolish(was_on(_,_,_));
 	do(skip).
 	
 +!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & moves_per_round(M) & not moves_left(M) & middle_agent(Name) <-
 	.print("ale cekam na kolegu2");
 	if(not(middleAgentComing(DX,DY))) { .send(Name, achieve, update_target(DX,DY)); }
+	.abolish(was_on(_,_,_));
 	do(skip).
 	
 // tady uz nic neni
