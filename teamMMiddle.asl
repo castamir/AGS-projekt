@@ -26,6 +26,8 @@ substep(0).
 
 +step(X) <- .abolish(fastPos(_,_)).
 
++was_on(_,_,Step1): was_on(_,_,Step2) & ((Step1 - Step2) > 200) <- .abolish(was_on(_,_,_)).
+
 +!do_action(_): moves_left(0) <- true.
 @atomicaction[atomic] +!do_action(A): fast_agent(Name) <-
 	do(A);
@@ -60,9 +62,10 @@ substep(0).
 
 @atomic4[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & moves_per_round(M) <-
 	.print("Drop");
-	.drop_all_desires;
+	.abolish(was_on(_,_,_));
+	/*.drop_all_desires;
 	.drop_all_intentions;
-	.drop_all_events;
+	.drop_all_events;*/
 	!do_action(drop).
 @atomic5[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY)<-
 	.print("Neni dostatek kol na drop");
@@ -238,8 +241,7 @@ substep(0).
 
 +!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & returning(BackStep) & substep(NowStep) &
 	was_on(GoToX, GoToY, BackStep) & not can_go(left) & not can_go(right) & not can_go(up) & not can_go(down) <-
-	
-	-substep(NowStep); +substep(NowStep + 1);
+	.print("Backtracking...");
 	-returning(BackStep); +returning(BackStep - 1);
 	if(PosX > GoToX) { !doMove(left); }
 	if(PosX < GoToX) { !doMove(right); }
@@ -299,6 +301,7 @@ substep(0).
 +!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
++!moveOrder(_,_,_,_): substep(Step) <- .abolish(returning(_)); +returning(Step - 1); !action.
 // ------ END -----
 
 +!update_target(X,Y) : goSomewhere(PosX,PosY) & depot(PosX,PosY) <- +nextGoSomewhere(X,Y) ; .print("OK 1 ---------------------------------- ").
