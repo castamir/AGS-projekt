@@ -87,8 +87,6 @@ max_visit_y_point(0).
 +!goToSpecificPoint(X,Y): grid_size(GridX, GridY) & substep(NowStep) & pos(PosX,PosY) 
 	& was_on(PosX,PosY, PrevStep) & was_on(PosX,PosY, PrevPrevStep) & ((NowStep - PrevStep) > 4) 
 	& ((PrevStep - PrevPrevStep) > 4) & ((NowStep - PrevStep) == (PrevStep - PrevPrevStep)) & not(free)  <-
-	.print("SHIT");
-	//!getMovement(X,Y);
 	if(PosX = (GridX - 1)) { !doMove(left); }
 	if(PosX = 0) {!doMove(right); }
 	if(PosY = (GridY - 1))  { !doMove(up); }
@@ -100,7 +98,6 @@ max_visit_y_point(0).
 	not(can_go(left)) & not(can_go(right)) & not(can_go(up)) & not(can_go(down)) & not(returning(_)) <-
 	.abolish(returning(_));
 	+returning(Step - 1);
-	.print("I AM STUCK");
 	!goToSpecificPoint(X,Y);
 .
 
@@ -170,24 +167,20 @@ max_visit_y_point(0).
 +!action: not middle_agent(_) | not fast_agent(_) <- .wait(100);!action.
 
 +!action: visit_points(V) & max_visit_points(V) & pos(MVX,VMY) & max_visit_x_point(MVX) & max_visit_y_point(VMY) <-
-	.print("KONEC");
 	do(skip).
 	
 +!action: not destination(_,_) <-
-	.print("hledam novy cil");  
 	.abolish(destination(_,_)); 
 	!find_cell_to_explore;
 	!action.                      
 	
 +!action: destination(DX,DY) & obstacle(DX,DY) & pos(PosX,PosY) <-
-	.print("Na cili je prekazka, seru na to");
 	.abolish(destination(_,_));
 	!find_cell_to_explore;
 	!action;
 	.abolish(was_on(_,_,_)).
 	
 +!action: destination(DX,DY) & pos(DX,DY) <-
-	.print("uz jsem tu...");  
 	.abolish(destination(_,_));
 	!find_cell_to_explore;
 	!action;

@@ -29,7 +29,7 @@ free.
 	for( .range(CntX,C,GridX-1) ) {
 		for( .range(CntY,C,GridY-1) ) {
 			if( not destination(_,_)) {
-				A = CntX;
+				A = GridX - 1 - CntX;
 				B = CntY;
 				if (((CntX mod (2*C+1)) == C) & ((CntY mod (2*C+1)) == C) & not(visited_point(A,B))) {
 					+destination(A,B);
@@ -57,7 +57,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 
 // vyzvednuti s jinym agentem
 +!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & ally(DX,DY) & step(S) & pick_in(S) <-
-	.print("nakladam surovinu");
 	do(pick);
 	-pick_in(S);
 	-found(gold,DX,DY);
@@ -65,25 +64,21 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	-gold(DX,DY);
 	-wood(DX,DY);
 	.abolish(destination(_,_));
-	+wait_for_transfer;
-	.print("surovina nalozena").
+	+wait_for_transfer.
 	
 // cekani na dalsiho agenta
 +!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & not ally(DX,DY) & middle_agent(Name) <-
-	.print("ale cekam na kolegu1");
 	if(not(middleAgentComing(DX,DY))) { .send(Name, achieve, update_target(DX,DY)); }
 	.abolish(was_on(_,_,_));
 	do(skip).
 	
 +!action: pos(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & moves_per_round(M) & not moves_left(M) & middle_agent(Name) <-
-	.print("ale cekam na kolegu2");
 	if(not(middleAgentComing(DX,DY))) { .send(Name, achieve, update_target(DX,DY)); }
 	.abolish(was_on(_,_,_));
 	do(skip).
 	
 // tady uz nic neni
 +!action: pos(DX,DY) & destination(DX,DY) & ( found(gold,DX,DY) | found(wood,DX,DY) ) & not gold(DX,DY) & not wood(DX,DY) & slow_agent(F1) & middle_agent(F2) <-
-	.print("tady uz nic neni");
 	.abolish(found(gold,DX,DY));
 	.abolish(found(wood,DX,DY));
 	.send(F1, untell, found(gold,DX,DY));
@@ -94,14 +89,12 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	!action.
 
 +!action: destination(DX,DY) & pos(DX,DY) & (gold(DX,DY) | wood(DX,DY)) & depot(DepX, DepY) & middle_agent(Name) <-
-	.print("jsem na policku se surovinou");
 	if(not(middleAgentComing(DX,DY))) { .send(Name, achieve, update_target(DepX, DepY)); }
 	do(skip);
 .
 	
 // nasel jsem blizsi zlato
 +!action: destination(DX,DY) & pos(PosX,PosY) & found(gold,GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G < D & middle_agent(Name) <-
-	.print("nasel jsem blizsi cil");
 	.abolish(destination(_,_));
 	+destination(GX,GY);
 	if(not(middleAgentComing(GX,GY))) { .send(Name, achieve, update_target(GX,GY)); } 
@@ -109,7 +102,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	
 // nasel jsem blizsi drevo
 +!action: destination(DX,DY) & pos(PosX,PosY) & found(wood,GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G < D & middle_agent(Name) <-
-	.print("nasel jsem blizsi cil");
 	.abolish(destination(_,_));
 	+destination(GX,GY);
 	.send(Name, achieve, update_target(GX,GY));
@@ -118,7 +110,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 
 // jsem na miste prohledani
 +!action: destination(DX,DY) & pos(DX,DY) <-
-	.print("uz jsem tu...");  
 	.abolish(was_on(_,_,_));
 	.abolish(destination(_,_));
 	!find_cell_to_explore;
@@ -129,7 +120,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	.min(Distances,Min);
 	?find_nearest_gold(Min,PosX,PosY,A,B);
 	+destination(A,B);
-	.print("zmena cile -> zlato na pozici ", A, ", ", B);
 	!action.
 // novy cil - drevo
 +!action: not destination(_,_) & found(wood,_,_) & pos(PosX,PosY)  <-
@@ -137,7 +127,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	.min(Distances,Min);
 	?find_nearest_wood(Min,PosX,PosY,A,B);
 	+destination(A,B);
-	.print("zmena cile -> wood na pozici ", A, ", ", B);
 	!action.
 // novy cil - prohledavani mapy
 +!action: not destination(_,_) & visit_points(V) & max_visit_points(W) & V < W <-
@@ -145,28 +134,23 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	!action.
 // mapa prohledana, suroviny posbirany
 +!action: visit_points(V) & max_visit_points(V) & not destination(_,_) & not found(gold,_,_) & not found(wood,_,_) <-
-	.print("KONEC");
 	do(skip).
 // pohyb
 // jsem v depu a mam suroviny, ale nemam full kola
 +!action : moves_per_round(M) & not moves_left(M) & not moves_left(0) & depot(DepX, DepY) & pos(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
-	.print("jsem v depu, ale nemuzu vylozit");
 	do(skip);
 	+visited_point(DepX,DepY).
 // jsem v depu a mam suroviny
 +!action : not moves_left(0) & depot(DepX, DepY) & pos(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
 	do(drop);
-	.abolish(was_on(_,_,_));
-	.print("jsem v depu - zasilka vylozena").
+	.abolish(was_on(_,_,_)).
 
 +!action : not moves_left(0) & depot(DepX, DepY) & pos(X,Y) & not destination(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
 	!goSomewhere(DepX,DepY);
-	.print("Pujdu do depa");
 	+visited_point(X,Y).
 
 +!action : not moves_left(0) & destination(X,Y) <-
 	!goSomewhere(X,Y);
-	.print("Pujdu do ", X, ", ", Y);
 	+visited_point(X,Y).
 
 +!action <- true.
@@ -222,8 +206,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 +!goToSpecificPoint(X,Y): grid_size(GridX, GridY) & substep(NowStep) & pos(PosX,PosY) 
 	& was_on(PosX,PosY, PrevStep) & was_on(PosX,PosY, PrevPrevStep) & ((NowStep - PrevStep) > 4) 
 	& ((PrevStep - PrevPrevStep) > 4) & ((NowStep - PrevStep) == (PrevStep - PrevPrevStep)) & not(free)  <-
-	.print("SHIT");
-	//!getMovement(X,Y);
 	if(PosX = (GridX - 1)) { !doMove(left); }
 	if(PosX = 0) {!doMove(right); }
 	if(PosY = (GridY - 1))  { !doMove(up); }
@@ -233,7 +215,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 +!goToSpecificPoint(_,_): moves_left(0) <- true.
 
 +!goToSpecificPoint(X,Y): pos(X,Y) & step(S) & fast_agent(Name) & (not carrying_gold(0) & not carrying_wood(0)) <-
-	.print("Synchro with fast");
 	SS = S+1;
 	.send(Name, tell, pick_in(SS));
 	-goSomewhere(X, Y);
@@ -241,7 +222,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	!action.
 	
 +!goToSpecificPoint(X,Y): pos(X, Y) & (not carrying_gold(0) | not carrying_wood(0)) & depot(DX, DY) & fast_agent(Name) <-
-	.print("Done! Returning to Depot...");
 	-goSomewhere(X, Y);
 	+goSomewhere(DX, DY);
 	.abolish(was_on(_,_,_));
@@ -253,7 +233,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	not(can_go(left)) & not(can_go(right)) & not(can_go(up)) & not(can_go(down)) & not(returning(_)) <-
 	.abolish(returning(_));
 	+returning(Step - 1);
-	.print("I AM STUCK");
 	!goToSpecificPoint(X,Y);
 .
 

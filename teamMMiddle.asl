@@ -63,15 +63,12 @@ substep(0).
 @atomic4[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & moves_per_round(M) <-
 	.print("Drop");
 	.abolish(was_on(_,_,_));
-	/*.drop_all_desires;
-	.drop_all_intentions;
-	.drop_all_events;*/
 	!do_action(drop).
 @atomic5[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY)<-
 	.print("Neni dostatek kol na drop");
 	!noop.
 
-@atomic6[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & carrying_capacity(CG + CW) & depot(PosX,PosY) & not goSomewhere(PosX,PosY) & not moves_left(0) <-
+@atomic6[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & carrying_capacity(CC) & CG + CW >= CC - 1 & depot(PosX,PosY) & not goSomewhere(PosX,PosY) & not moves_left(0) <-
 	.abolish(goSomewhere(_));
 	+goSomewhere(PosX,PosY);
 	!goSomewhere(PosX,PosY).
