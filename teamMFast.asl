@@ -143,6 +143,15 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	.print("KONEC");
 	do(skip).
 // pohyb
+// jsem v depu a mam suroviny, ale nemam full kola
++!action : moves_per_round(M) & not moves_left(M) & not moves_left(0) & depot(DepX, DepY) & pos(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
+	.print("jsem v depu, ale nemuzu vylozit");
+	do(skip);
+	+visited_point(X,Y).
+// jsem v depu a mam suroviny
++!action : not moves_left(0) & depot(DepX, DepY) & pos(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
+	do(drop);
+	.print("jsem v depu - zasilka vylozena").
 
 +!action : not moves_left(0) & depot(DepX, DepY) & not destination(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
 	!goSomewhere(DepX,DepY);
@@ -161,7 +170,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	.abolish(last_move(_));
 	+last_move(Direction);
 	do(Direction);
-	
 	for( .range(CntX,-V,V) ) {
 		for( .range(CntY,-V,V) ) {
 			if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
