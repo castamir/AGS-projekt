@@ -44,11 +44,12 @@ max_visit_y_point(0).
 	}.
 // next direction and its position
 
-
+/*
 +!doMove(left):  substep(S) & pos(PosX, PosY) & ally(PosX-1, PosY) <- do(skip).
 +!doMove(up):    substep(S) & pos(PosX, PosY) & ally(PosX, PosY-1) <- do(skip).
 +!doMove(right): substep(S) & pos(PosX, PosY) & ally(PosX+1, PosY) <- do(skip).
 +!doMove(down):  substep(S) & pos(PosX, PosY) & ally(PosX, PosY+1) <- do(skip).
+*/
 +!doMove(Direction): substep(S) & pos(PosX, PosY) <-
 	-substep(S); +substep(S + 1);
 	.abolish(last_move(_));
@@ -106,7 +107,6 @@ max_visit_y_point(0).
 +!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & returning(BackStep) & substep(NowStep) &
 	was_on(GoToX, GoToY, BackStep) & not can_go(left) & not can_go(right) & not can_go(up) & not can_go(down) <-
 	
-	-substep(NowStep); +substep(NowStep + 1);
 	-returning(BackStep); +returning(BackStep - 1);
 	if(PosX > GoToX) { !doMove(left); }
 	if(PosX < GoToX) { !doMove(right); }
@@ -164,7 +164,7 @@ max_visit_y_point(0).
 +!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
-
++!moveOrder(_,_,_,_): substep(Step) <- .abolish(returning(_)); +returning(Step - 1); !action.
 
 //init
 +!action: not middle_agent(_) | not fast_agent(_) <- .wait(100);!action.
