@@ -17,6 +17,7 @@ max_visit_y_point(0).
 	
 
 
++step(X) : moves_left(0) <- true.
 +step(X) <- !start_round.
 
 +!start_round: middle_agent(Name) <-
@@ -86,7 +87,6 @@ max_visit_y_point(0).
 +!goToSpecificPoint(X,Y): grid_size(GridX, GridY) & substep(NowStep) & pos(PosX,PosY) 
 	& was_on(PosX,PosY, PrevStep) & was_on(PosX,PosY, PrevPrevStep) & ((NowStep - PrevStep) > 4) 
 	& ((PrevStep - PrevPrevStep) > 4) & ((NowStep - PrevStep) == (PrevStep - PrevPrevStep)) & not(free)  <-
-	.print("SHIT");
 	//!getMovement(X,Y);
 	if(PosX = (GridX - 1)) { !doMove(left); }
 	if(PosX = 0) {!doMove(right); }
@@ -170,24 +170,24 @@ max_visit_y_point(0).
 +!action: not middle_agent(_) | not fast_agent(_) <- .wait(100);!action.
 
 +!action: visit_points(V) & max_visit_points(V) & pos(MVX,VMY) & max_visit_x_point(MVX) & max_visit_y_point(VMY) <-
-	.print("KONEC");
+	//.print("KONEC");
 	do(skip).
 	
 +!action: not destination(_,_) <-
-	.print("hledam novy cil");  
+	//.print("hledam novy cil");  
 	.abolish(destination(_,_)); 
 	!find_cell_to_explore;
 	!action.                      
 	
 +!action: destination(DX,DY) & obstacle(DX,DY) & pos(PosX,PosY) <-
-	.print("Na cili je prekazka, seru na to");
+	//.print("Na cili je prekazka, seru na to");
 	.abolish(destination(_,_));
 	!find_cell_to_explore;
 	!action;
 	.abolish(was_on(_,_,_)).
 	
 +!action: destination(DX,DY) & pos(DX,DY) <-
-	.print("uz jsem tu...");  
+	//.print("uz jsem tu...");  
 	.abolish(destination(_,_));
 	!find_cell_to_explore;
 	!action;

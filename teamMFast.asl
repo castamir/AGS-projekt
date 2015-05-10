@@ -15,27 +15,33 @@ free.
 	+max_visit_points(D).
 
 
++step(X) : moves_left(0) <- true.
 +step(X) <- -move_on;-picking.
 
 +!start_round <-
+	.print("Zacinam tah");
 	!inform_friends;!action;
 	!inform_friends;!action;
 	!inform_friends;!action.
 
-+!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C)<-
++!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C) & visit_points(V) <-
 	for( .range(CntX,C,GridX-1) ) {
 		for( .range(CntY,C,GridY-1) ) {
 			if( not destination(_,_)) {
 				A = CntX;
 				B = CntY;
 				if (((CntX mod (2*C+1)) == C) & ((CntY mod (2*C+1)) == C) & not(visited_point(A,B))) {
-					+destination(A,B);
 					+visited_point(A,B);
-					W = V + 1;
-					-visit_points(V);+visit_points(W)
+					-visit_points(V);+visit_points(V + 1);
+					/*if (not explored(A,B)) {*/
+						+destination(A,B);
+					/*}*/
 				}
 			}
 		}	
+	}
+	if (not explored(A,B)) {
+		+end;
 	}
 .
 
@@ -44,10 +50,16 @@ calc_distance(PosX,PosY,X,Y,D) :- D = math.abs(PosX - X) + math.abs(PosY-Y).
 find_nearest_gold(D,PosX,PosY,X,Y) :- found(gold,X,Y) & calc_distance(PosX,PosY,X,Y,D).
 find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,X,Y,D).
 
+
++!noop : moves_left(0) <- true.
++!noop : moves_left(N) <- do(skip);!noop.
+
 //init
 +!action: not slow_agent(_) | not middle_agent(_) <- !action.
 
 +!action : moves_left(0) <- true.
++!action : end & not moves_left(0) <- !noop.
++!action : end <- true.
 
 // prave doslo k vyzvednuti => musim prenest suroviny
 +!action: ( not carrying_gold(0) | not carrying_wood(0)) & not move_on  <- !action.
@@ -154,13 +166,13 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	.print("jsem v depu - zasilka vylozena").
 
 +!action : not moves_left(0) & depot(DepX, DepY) & pos(X,Y) & not destination(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
-	!goSomewhere(DepX,DepY);
 	.print("Pujdu do depa");
+	!goSomewhere(DepX,DepY);
 	+visited_point(X,Y).
 
 +!action : not moves_left(0) & destination(X,Y) <-
-	!goSomewhere(X,Y);
 	.print("Pujdu do ", X, ", ", Y);
+	!goSomewhere(X,Y);
 	+visited_point(X,Y).
 
 +!action <- true.
@@ -186,20 +198,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 +!goSomewhere(X,Y) <-
 	!getMovement(X,Y); !goToSpecificPoint(X,Y);
 .
-/*
-+!getMovement(X,Y): not free & pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) <-
-	.abolish(can_go(_));
-	+was_on(PosX, PosY, Step);
-	if (not(obstacle(PosX + 1, PosY)) & ((PosX + 1) < GridX) & not last_move(left))
-		{ +can_go(right) }
-	if(not(obstacle(PosX - 1, PosY)) & ((PosX - 1) >= 0   ) & not last_move(right))
-		{ +can_go(left) } 
-	if(not(obstacle(PosX, PosY + 1)) & ((PosY + 1) < GridY) & not last_move(up))
-		{ +can_go(down) } 
-	if(not(obstacle(PosX, PosY - 1)) & ((PosY - 1) >= 0   ) & not last_move(down))
-		{ +can_go(up) } 
-.
-*/
+
 +!getMovement(X,Y): pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) <-
 	.abolish(can_go(_));
 	+was_on(PosX, PosY, Step);
@@ -228,8 +227,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 
 +!goToSpecificPoint(X,Y): pos(X,Y) & step(S) & fast_agent(Name) & (not carrying_gold(0) & not carrying_wood(0)) <-
 	.print("Synchro with fast");
-	SS = S+1;
-	.send(Name, tell, pick_in(SS));
+	.send(Name, tell, pick_in(S + 1));
 	-goSomewhere(X, Y);
 	.abolish(was_on(_,_,_));
 	!action.
@@ -253,6 +251,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 
 +!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & returning(BackStep) & substep(NowStep) &
 	was_on(GoToX, GoToY, BackStep) & not can_go(left) & not can_go(right) & not can_go(up) & not can_go(down) <-
+	.print("goToSpecificPoint");
 	
 	-substep(NowStep); +substep(NowStep + 1);
 	-returning(BackStep); +returning(BackStep - 1);
@@ -314,6 +313,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 +!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
++!moveOrder(_,_,_,_) <- !action.
 
 +!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
 	for( .range(CntX,-C,C) ) {

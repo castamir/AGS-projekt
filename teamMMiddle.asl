@@ -24,12 +24,14 @@ substep(0).
 	.send(F2, tell, middle_agent(Name));
 . 
 
++step(X) : moves_left(0) <- true.
 +step(X) <- .abolish(fastPos(_,_)).
 
 +!do_action(_): moves_left(0) <- true.
 @atomicaction[atomic] +!do_action(A): fast_agent(Name) <-
 	do(A);
 	if (moves_left(0)) {
+		.print("Faste, uz muzes");
 		.send(Name, achieve, start_round)
 	}.
 +!do_action(_,_,_): moves_left(0) <- true.
@@ -50,13 +52,13 @@ substep(0).
 //init
 +!action: not slow_agent(_) | not fast_agent(_) <- !action.
 
-+!action: moves_left(0) <- true.
-
 +!action: just_picked & pos(X,Y) & ally(X,Y) & fast_agent(Name) <-
 	!do_action(transfer, Name, 1);
 	.send(Name, tell, move_on);
 	-just_picked;
 	!action.
+
++!action: moves_left(0) <- true.
 
 +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & moves_per_round(M) <-
 	.print("Drop");
@@ -100,11 +102,15 @@ substep(0).
 	!action;
 .
 
++fastPos(FastX,FastY) <-
+	.print("Fast is at [", FastX,",",FastY,"]");
+	+fast_found.
+
 +!action: not moves_left(0) & fast_agent(Name) & not fastPos(_,_) <-
 	.print("Where are you, Fast?");
 	.send(Name,achieve,middleStalker);
-	.wait({+fastPos(FastX,FastY)});
-	.print("Fast is at [", FastX,",",FastY,"]");
+	.wait({+fast_found});
+	-fast_found;
 	!action.
 	
 +!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) & pos(FastX,FastY) <-
@@ -201,8 +207,6 @@ substep(0).
 
 +!goToSpecificPoint(X,Y): pos(X,Y) & step(S) & fast_agent(Name) & (not carrying_gold(0) & not carrying_wood(0)) <-
 	.print("Synchro with fast");
-	SS = S+1;
-	.send(Name, tell, pick_in(SS));
 	-goSomewhere(X, Y);
 	.abolish(was_on(_,_,_));
 	!action.
@@ -287,6 +291,7 @@ substep(0).
 +!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
++!moveOrder(_,_,_,_) <- !action.
 // ------ END -----
 
 +!update_target(X,Y) : goSomewhere(PosX,PosY) & depot(PosX,PosY) <- +nextGoSomewhere(X,Y) ; .print("OK 1 ---------------------------------- ").
