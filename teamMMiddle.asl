@@ -26,11 +26,13 @@ substep(0).
 
 +step(X) <- .abolish(fastPos(_,_)).
 
++!do_action(_): moves_left(0) <- true.
 @atomicaction[atomic] +!do_action(A): fast_agent(Name) <-
 	do(A);
 	if (moves_left(0)) {
 		.send(Name, achieve, start_round)
 	}.
++!do_action(_,_,_): moves_left(0) <- true.
 @atomictransfer[atomic] +!do_action(A,B,C): fast_agent(Name) <-
 	do(A,B,C);
 	if (moves_left(0)) {

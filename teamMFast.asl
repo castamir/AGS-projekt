@@ -147,13 +147,13 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 +!action : moves_per_round(M) & not moves_left(M) & not moves_left(0) & depot(DepX, DepY) & pos(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
 	.print("jsem v depu, ale nemuzu vylozit");
 	do(skip);
-	+visited_point(X,Y).
+	+visited_point(DepX,DepY).
 // jsem v depu a mam suroviny
 +!action : not moves_left(0) & depot(DepX, DepY) & pos(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
 	do(drop);
 	.print("jsem v depu - zasilka vylozena").
 
-+!action : not moves_left(0) & depot(DepX, DepY) & not destination(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
++!action : not moves_left(0) & depot(DepX, DepY) & pos(X,Y) & not destination(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
 	!goSomewhere(DepX,DepY);
 	.print("Pujdu do depa");
 	+visited_point(X,Y).
