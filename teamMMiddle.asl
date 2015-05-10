@@ -30,18 +30,19 @@ substep(0).
 +!action: not slow_agent(_) | not fast_agent(_) <- !action.
 
 +!action: moves_left(0) <- true.
-
+/*
 +!action: just_picked & pos(X,Y) & ally(X,Y) & fast_agent(Name) <-
 	do(transfer, Name, 1);
 	.send(Name, tell, move_on);
 	-just_picked;
 	!action.
-
+*/
 +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & M >= CG+CW<-
 	do(drop).
 
 +!action: (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) & not moves_left(0)<-
-	do(skip).
+	do(skip);	
+.
 
 +!action: (not carrying_gold(0) | not carrying_wood(0)) & depot(PosX,PosY) & not goSomewhere(_,_) & not moves_left(0) <-
 	+goSomewhere(PosX,PosY);
@@ -79,6 +80,12 @@ substep(0).
 	!action;
 .
 
++!action: not moves_left(0) & stalkFastAgent(FAX, FAY) <-
+	+goSomewhere(FAX,FAY);
+	!goSomewhere(FAX,FAY);
+	!action;
+.
+
 +!action: not moves_left(0) <-
 	.print("Nothing to do!");
 	do(skip);
@@ -98,6 +105,12 @@ substep(0).
 	+found(wood,X,Y);
 	.send(F1, tell, found(gold,X,Y));
 	.send(F2, tell, found(gold,X,Y));
+.
+
++fastAgentIsAt(FAX, FAY) <- 
+	.abolish(fastAgentIsAt(_,_));
+	.abolish(stalkFastAgent(_,_));
+	+stalkFastAgent(FAX,FAY);
 .
 
 +!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) & visibility(V) <-
@@ -172,7 +185,7 @@ substep(0).
 	
 +!goToSpecificPoint(X,Y): pos(X, Y) & (not carrying_gold(0) | not carrying_wood(0)) & depot(DX, DY) & fast_agent(Name) <-
 	.print("Done! Returning to Depot...");
-	-goSomewhere(X, Y);
+	.abolish(goSomewhere(X,Y));
 	+goSomewhere(DX, DY);
 	.abolish(was_on(_,_,_));
 	.send(Name, tell, middleAgentComing(DX,DY));
