@@ -32,6 +32,9 @@ substep(0).
 	.send(Name, achieve, start_round).
 +!start_round <- .wait(200);!start_round.
 
++!noop : moves_left(0) <- true.
++!noop : moves_left(N) <- do(skip);!noop.
+
 //init
 +!action: not slow_agent(_) | not fast_agent(_) <- !action.
 
@@ -43,8 +46,6 @@ substep(0).
 	-just_picked;
 	!action.
 
-+!noop : moves_left(0) <- true.
-+!noop : moves_left(N) <- do(skip);!noop.
 +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & moves_per_round(M) <-
 	.print("Drop");
 	do(drop).
@@ -88,6 +89,12 @@ substep(0).
 	!action;
 .
 
++!action: not moves_left(0) & stalkFastAgent(FAX, FAY) <-
+	+goSomewhere(FAX,FAY);
+	!goSomewhere(FAX,FAY);
+	!action;
+.
+
 +!action: not moves_left(0) <-
 	.print("Nothing to do!");
 	do(skip);
@@ -107,6 +114,12 @@ substep(0).
 	+found(wood,X,Y);
 	.send(F1, tell, found(gold,X,Y));
 	.send(F2, tell, found(gold,X,Y));
+.
+
++fastAgentIsAt(FAX, FAY) <- 
+	.abolish(fastAgentIsAt(_,_));
+	.abolish(stalkFastAgent(_,_));
+	+stalkFastAgent(FAX,FAY);
 .
 
 +!doMove(_): moves_left(0) <- true.
@@ -182,7 +195,7 @@ substep(0).
 	
 +!goToSpecificPoint(X,Y): pos(X, Y) & (not carrying_gold(0) | not carrying_wood(0)) & depot(DX, DY) & fast_agent(Name) <-
 	.print("Done! Returning to Depot...");
-	-goSomewhere(X, Y);
+	.abolish(goSomewhere(X,Y));
 	+goSomewhere(DX, DY);
 	.abolish(was_on(_,_,_));
 	.send(Name, tell, middleAgentComing(DX,DY));

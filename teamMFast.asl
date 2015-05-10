@@ -1,6 +1,7 @@
 visibility(1).
 visit_points(0).
-
+substep(0).
+last_move(blank).
 free.
 
 // init
@@ -21,6 +22,14 @@ free.
 	!inform_friends;!action;
 	!inform_friends;!action.
 
++substep(1): pos(PosX, PosY) & middle_agent(Name) <-
+	.print("Stalkuj me");	
+	.send(Name, tell, fastAgentIsAt(PosX, PosY));
+.
++was_on(A,B,X): was_on(C,D,Y) & ((X - Y) = 4) & middle_agent(Name) <-
+	.print("Stalkuj me");	
+	.send(Name, tell, fastAgentIsAt(C,D));
+.
 
 +!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C)<-
 	for( .range(CntX,C,GridX-1) ) {
@@ -36,12 +45,8 @@ free.
 				}
 			}
 		}	
-	}.
-// next direction and its position
-calc_next_move(NX,PY,left)  :-  pos(PX,PY) & destination(DX,DY) & PX > DX & NX = PX-1.
-calc_next_move(NX,PY,right) :-  pos(PX,PY) & destination(DX,DY) & PX < DX & NX = PX+1.
-calc_next_move(PX,NY,up)    :-  pos(PX,PY) & destination(DX,DY) & PY > DY & NY = PY-1.
-calc_next_move(PX,NY,down)  :-  pos(PX,PY) & destination(DX,DY) & PY < DY & NY = PY+1.
+	}
+.
 
 calc_distance(PosX,PosY,X,Y,D) :- D = math.abs(PosX - X) + math.abs(PosY-Y).
 
@@ -99,7 +104,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 .
 	
 // nasel jsem blizsi zlato
-+!action: destination(DX,DY) & pos(PosX,PosY) & found(gold,GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G <= D & middle_agent(Name) <-
++!action: destination(DX,DY) & pos(PosX,PosY) & found(gold,GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G < D & middle_agent(Name) <-
 	.print("nasel jsem blizsi cil");
 	.abolish(destination(_,_));
 	+destination(GX,GY);
@@ -107,16 +112,18 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	!action.
 	
 // nasel jsem blizsi drevo
-+!action: destination(DX,DY) & pos(PosX,PosY) & found(wood,GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G <= D & middle_agent(Name) <-
++!action: destination(DX,DY) & pos(PosX,PosY) & found(wood,GX,GY) & (DX \== GX | DY \== GY) & calc_distance(PosX,PosY,DX,DY,D) & calc_distance(PosX,PosY,GX,GY,G) & G < D & middle_agent(Name) <-
 	.print("nasel jsem blizsi cil");
 	.abolish(destination(_,_));
 	+destination(GX,GY);
 	.send(Name, achieve, update_target(GX,GY));
+	if(not(middleAgentComing(GX,GY))) { .send(Name, achieve, update_target(GX,GY)); } 
 	!action.
 
 // jsem na miste prohledani
 +!action: destination(DX,DY) & pos(DX,DY) <-
 	.print("uz jsem tu...");  
+	.abolish(was_on(_,_,_));
 	.abolish(destination(_,_));
 	!find_cell_to_explore;
 	!action.
@@ -145,14 +152,170 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	.print("KONEC");
 	do(skip).
 // pohyb
-+!action : not moves_left(0) <-
-	?calc_next_move(X,Y,D);
+
++!action : not moves_left(0) & depot(DepX, DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
+	!goSomewhere(DepX,DepY);
+	.print("Pujdu do depa");
+	+visited_point(X,Y).
+
++!action : not moves_left(0) & destination(X,Y) <-
+	!goSomewhere(X,Y);
 	.print("Pujdu do ", X, ", ", Y);
-	+visited_point(X,Y);
-	do(D).
+	+visited_point(X,Y).
 
 +!action <- true.
  
++!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) & visibility(V) <-
+	-substep(S); +substep(S + 1);
+	.abolish(last_move(_));
+	+last_move(Direction);
+	do(Direction);
+	
+	for( .range(CntX,-V,V) ) {
+		for( .range(CntY,-V,V) ) {
+			if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
+				A = PosX + CntX; B = PosY + CntY;
+				+explored(PosX + CntX, PosY + CntY);
+				.send(F1, tell, explored(A,B));
+				.send(F2, tell, explored(A,B));
+			}
+		}
+	}
+.
+
++!goSomewhere(X,Y): moves_per_round(0) <- true.
++!goSomewhere(X,Y) <-
+	!getMovement(X,Y); !goToSpecificPoint(X,Y);
+.
+/*
++!getMovement(X,Y): not free & pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) <-
+	.abolish(can_go(_));
+	+was_on(PosX, PosY, Step);
+	if (not(obstacle(PosX + 1, PosY)) & ((PosX + 1) < GridX) & not last_move(left))
+		{ +can_go(right) }
+	if(not(obstacle(PosX - 1, PosY)) & ((PosX - 1) >= 0   ) & not last_move(right))
+		{ +can_go(left) } 
+	if(not(obstacle(PosX, PosY + 1)) & ((PosY + 1) < GridY) & not last_move(up))
+		{ +can_go(down) } 
+	if(not(obstacle(PosX, PosY - 1)) & ((PosY - 1) >= 0   ) & not last_move(down))
+		{ +can_go(up) } 
+.
+*/
++!getMovement(X,Y): pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) <-
+	.abolish(can_go(_));
+	+was_on(PosX, PosY, Step);
+	if(not(obstacle(PosX + 1, PosY)) & ((PosX + 1) < GridX) & not(was_on(PosX + 1, PosY, _)))
+		{ +can_go(right) }
+	if(not(obstacle(PosX - 1, PosY)) & ((PosX - 1) >= 0   ) & not(was_on(PosX - 1, PosY, _)))
+		{ +can_go(left) } 
+	if(not(obstacle(PosX, PosY + 1)) & ((PosY + 1) < GridY) & not(was_on(PosX, PosY + 1, _)))
+		{ +can_go(down) } 
+	if(not(obstacle(PosX, PosY - 1)) & ((PosY - 1) >= 0   ) & not(was_on(PosX, PosY - 1, _)))
+		{ +can_go(up) } 
+.
+
++!goToSpecificPoint(X,Y): grid_size(GridX, GridY) & substep(NowStep) & pos(PosX,PosY) 
+	& was_on(PosX,PosY, PrevStep) & was_on(PosX,PosY, PrevPrevStep) & ((NowStep - PrevStep) > 4) 
+	& ((PrevStep - PrevPrevStep) > 4) & ((NowStep - PrevStep) == (PrevStep - PrevPrevStep)) & not(free)  <-
+	.print("SHIT");
+	//!getMovement(X,Y);
+	if(PosX = (GridX - 1)) { !doMove(left); }
+	if(PosX = 0) {!doMove(right); }
+	if(PosY = (GridY - 1))  { !doMove(up); }
+	if(PosY = 0) { !doMove(down); }
+	else { +free; !getMovement(X,Y); !goToSpecificPoint(X,Y); }
+.
++!goToSpecificPoint(_,_): moves_left(0) <- true.
+
++!goToSpecificPoint(X,Y): pos(X,Y) & step(S) & fast_agent(Name) & (not carrying_gold(0) & not carrying_wood(0)) <-
+	.print("Synchro with fast");
+	SS = S+1;
+	.send(Name, tell, pick_in(SS));
+	-goSomewhere(X, Y);
+	.abolish(was_on(_,_,_));
+	!action.
+	
++!goToSpecificPoint(X,Y): pos(X, Y) & (not carrying_gold(0) | not carrying_wood(0)) & depot(DX, DY) & fast_agent(Name) <-
+	.print("Done! Returning to Depot...");
+	-goSomewhere(X, Y);
+	+goSomewhere(DX, DY);
+	.abolish(was_on(_,_,_));
+	.send(Name, tell, middleAgentComing(DX,DY));
+	.send(Name, untell, middleAgentComing(X,Y));
+	!action.
+
++!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & substep(Step) &
+	not(can_go(left)) & not(can_go(right)) & not(can_go(up)) & not(can_go(down)) & not(returning(_)) <-
+	.abolish(returning(_));
+	+returning(Step - 1);
+	.print("I AM STUCK");
+	!goToSpecificPoint(X,Y);
+.
+
++!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & returning(BackStep) & substep(NowStep) &
+	was_on(GoToX, GoToY, BackStep) & not can_go(left) & not can_go(right) & not can_go(up) & not can_go(down) <-
+	
+	-substep(NowStep); +substep(NowStep + 1);
+	-returning(BackStep); +returning(BackStep - 1);
+	if(PosX > GoToX) { !doMove(left); }
+	if(PosX < GoToX) { !doMove(right); }
+	if(PosY > GoToY) { !doMove(up); }
+	if(PosY < GoToY) { !doMove(down); }
+.
+
+// ***************  DEFAULT MOVEMENT *****************
+// up -> right -> left -> down
+// UP + LEFT
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY > Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(left,down,up,right).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY > Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(up,right,left,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY > Y)                    <- -free; .abolish(returning(_)); !moveOrder(up,left,right,down).
+
+// DOWN + LEFT	
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY < Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(left,up,down,right).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY < Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(down,right,left,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY < Y)                    <- -free; .abolish(returning(_)); !moveOrder(down,left,right,up).
+
+// UP + RIGHT
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY > Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(right,down,up,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY > Y) & last_move(left)  <- -free; .abolish(returning(_)); !moveOrder(up,left,right,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY > Y)                    <- -free; .abolish(returning(_)); !moveOrder(up,right,left,down).
+
+// DOWN + RIGHT
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY < Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(right,up,down,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY < Y) & last_move(left)  <- -free; .abolish(returning(_)); !moveOrder(down,left,right,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY < Y)                    <- -free; .abolish(returning(_)); !moveOrder(down,right,left,up).
+
+// UP
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY > Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(right,left,down,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY > Y) & last_move(left)  <- +free; .abolish(returning(_)); !moveOrder(up,left,down,right).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY > Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(up,right,down,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY > Y) 				   <- +free; .abolish(returning(_)); !moveOrder(up,right,left,down).
+
+// DOWN
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY < Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(right,left,up,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY < Y) & last_move(left)  <- -free; .abolish(returning(_)); !moveOrder(down,left,right,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY < Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(down,right,up,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY < Y) 				   <- +free; .abolish(returning(_)); !moveOrder(down,left,right,up).
+
+// RIGHT
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY = Y) & last_move(left)  <- -free; .abolish(returning(_)); !moveOrder(up,down,left,right).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY = Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(right,up,left,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY = Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(right,down,left,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX < X) & (PosY = Y) 				   <- +free; .abolish(returning(_)); !moveOrder(right,up,down,left).
+
+// LEFT
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) & last_move(right) <- -free; .abolish(returning(_)); !moveOrder(up,down,right,left).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) & last_move(up)    <- -free; .abolish(returning(_)); !moveOrder(left,up,right,down).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) & last_move(down)  <- -free; .abolish(returning(_)); !moveOrder(left,down,right,up).
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX > X) & (PosY = Y) 				   <- +free; .abolish(returning(_)); !moveOrder(left,up,down,right).
+
++!goToSpecificPoint(X,Y): pos(PosX, PosY) & (PosX = X) & (PosY = Y) 				   <- .abolish(returning(_)); .abolish(goSomewhere(_,_)).
+
++!moveOrder(D,_,_,_): can_go(D) <- !doMove(D).
++!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
++!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
++!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
+
 +!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
 	for( .range(CntX,-C,C) ) {
 		for( .range(CntY,-C,C) ) {
