@@ -164,24 +164,24 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	+visited_point(X,Y).
 
 +!action <- true.
- 
-+!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) & visibility(V) <-
-	-substep(S); +substep(S + 1);
-	.abolish(last_move(_));
-	+last_move(Direction);
-	do(Direction);
-	for( .range(CntX,-V,V) ) {
-		for( .range(CntY,-V,V) ) {
-			if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
-				A = PosX + CntX; B = PosY + CntY;
-				+explored(PosX + CntX, PosY + CntY);
-				.send(F1, tell, explored(A,B));
-				.send(F2, tell, explored(A,B));
+
+@atomicmove2s[atomic] +!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) & visibility(V) <-
+	if( not moves_left(0)) {
+		-substep(S); +substep(S + 1);
+		.abolish(last_move(_));
+		+last_move(Direction);
+		do(Direction);
+		for( .range(CntX,-V,V) ) {
+			for( .range(CntY,-V,V) ) {
+				if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
+					A = PosX + CntX; B = PosY + CntY;
+					+explored(PosX + CntX, PosY + CntY);
+					.send(F1, tell, explored(A,B));
+					.send(F2, tell, explored(A,B));
+				}
 			}
 		}
-	}
-.
-
+	}.
 +!goSomewhere(X,Y): moves_per_round(0) <- true.
 +!goSomewhere(X,Y) <-
 	!getMovement(X,Y); !goToSpecificPoint(X,Y);

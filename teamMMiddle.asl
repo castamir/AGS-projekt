@@ -26,14 +26,24 @@ substep(0).
 
 +step(X) <- .abolish(fastPos(_,_)).
 
-+!start_round: fast_agent(Name) <-
+@atomicaction[atomic] +!do_action(A): fast_agent(Name) <-
+	do(A);
+	if (moves_left(0)) {
+		.send(Name, achieve, start_round)
+	}.
+@atomictransfer[atomic] +!do_action(A,B,C): fast_agent(Name) <-
+	do(A,B,C);
+	if (moves_left(0)) {
+		.send(Name, achieve, start_round)
+	}.
+
++!start_round <-
 	!action;
-	!action;
-	.send(Name, achieve, start_round).
+	!action.
 +!start_round <- .wait(200);!start_round.
 
 +!noop : moves_left(0) <- true.
-+!noop : moves_left(N) <- do(skip);!noop.
++!noop : moves_left(N) <- !do_action(skip);!noop.
 
 //init
 +!action: not slow_agent(_) | not fast_agent(_) <- !action.
@@ -41,14 +51,14 @@ substep(0).
 +!action: moves_left(0) <- true.
 
 +!action: just_picked & pos(X,Y) & ally(X,Y) & fast_agent(Name) <-
-	do(transfer, Name, 1);
+	!do_action(transfer, Name, 1);
 	.send(Name, tell, move_on);
 	-just_picked;
 	!action.
 
 +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & moves_per_round(M) <-
 	.print("Drop");
-	do(drop).
+	!do_action(drop).
 +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY)<-
 	.print("Neni dostatek kol na drop");
 	!noop.
@@ -60,19 +70,18 @@ substep(0).
 +!action: pos(PosX, PosY) & (gold(PosX, PosY) | wood(PosX, PosY)) & ally(PosX, PosY) & moves_per_round(M) & not moves_left(M) & step(S) & fast_agent(Name) <-
 	SS = S+1;
 	.send(Name, tell, pick_in(SS));
-	do(skip);
-	!action.
+	!noop.
 
 +!action: pos(PosX, PosY) & gold(PosX, PosY) & carrying_gold(Gold) & carrying_wood(0) &
 	carrying_capacity(Cap) & (Gold <= Cap) & ally(PosX, PosY) & moves_left(M) & moves_per_round(M) <-
 	+just_picked;
-	do(pick);
+	!do_action(pick);
 	-found(gold,PosX,PosY).
 
 +!action: pos(PosX, PosY) & wood(PosX, PosY) & carrying_gold(0) & carrying_wood(Wood) &
 	carrying_capacity(Cap) & (Wood <= Cap) & ally(PosX, PosY) & moves_left(M) & moves_per_round(M) <-
 	+just_picked;
-	do(pick);
+	!do_action(pick);
 	-found(wood,PosX,PosY).
 
 +!action: goSomewhere(DX, DY) & not moves_left(0) <-
@@ -96,15 +105,18 @@ substep(0).
 	.print("Fast is at [", FastX,",",FastY,"]");
 	!action.
 	
-+!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) <-
++!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) & pos(FastX,FastY) <-
+	.print("Gotha, Fast...");
+	!noop.
+
++!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) & not pos(FastX,FastY) <-
 	.print("Stalking Fast...");
 	!goSomewhere(FastX,FastY);
 	!action.
 	
 +!action: not moves_left(0) <-
 	.print("Idle.");
-	do(skip);
-	!action.
+	!noop.
 
 +obstacle(X,Y): not(found(obstacle,X,Y)) <-
 	+found(obstacle,X,Y);
@@ -123,12 +135,12 @@ substep(0).
 .
 
 +!doMove(_): moves_left(0) <- true.
-+!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) & visibility(V) <-
+@atomicmove[atomic] +!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) & visibility(V) <-
 	if( not moves_left(0)) {
 		-substep(S); +substep(S + 1);
 		.abolish(last_move(_));
 		+last_move(Direction);
-		do(Direction);
+		!do_action(Direction);
 		for( .range(CntX,-V,V) ) {
 			for( .range(CntY,-V,V) ) {
 				if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
