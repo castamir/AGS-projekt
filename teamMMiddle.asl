@@ -118,12 +118,11 @@ substep(0).
 +!action: not moves_left(0) & fast_agent(Name) & not fastPos(_,_) <-
  	.print("Where are you, Fast?");
  	.send(Name,achieve,middleStalker);
-	.wait({+fast_found});
 	-fast_found;
  	!action.
 	
 @atomic14[atomic] +!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) & pos(FastX,FastY) <-
-	.print("Gotha, Fast...");
+	.print("Gotcha, Fast...");
 	!noop.
 
 @atomic15[atomic] +!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) & not pos(FastX,FastY) <-
