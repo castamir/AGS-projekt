@@ -144,7 +144,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	do(skip).
 // pohyb
 
-+!action : not moves_left(0) & depot(DepX, DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
++!action : not moves_left(0) & depot(DepX, DepY) & not destination(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
 	!goSomewhere(DepX,DepY);
 	.print("Pujdu do depa");
 	+visited_point(X,Y).
