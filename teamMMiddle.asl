@@ -24,7 +24,7 @@ substep(0).
 	.send(F2, tell, middle_agent(Name));
 . 
 
-+step(X) <- true.
++step(X) <- .abolish(fastPos(_,_)).
 
 +!start_round: fast_agent(Name) <-
 	!action;
