@@ -89,14 +89,20 @@ substep(0).
 	!action;
 .
 
-+!action: not moves_left(0) & stalkFastAgent(FAX, FAY) <-
-	+goSomewhere(FAX,FAY);
-	!goSomewhere(FAX,FAY);
-	!action;
-.
-
++!action: not moves_left(0) & fast_agent(Name) & not fastPos(_,_) <-
+	.print("Where are you, Fast?");
+	.send(Name,achieve,middleStalker);
+	.wait({+fastPos(FastX,FastY)});
+	.print("Fast is at [", FastX,",",FastY,"]");
+	!action.
+	
++!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) <-
+	.print("Stalking Fast...");
+	!goSomewhere(FastX,FastY);
+	!action.
+	
 +!action: not moves_left(0) <-
-	.print("Nothing to do!");
+	.print("Idle.");
 	do(skip);
 	!action.
 
@@ -114,12 +120,6 @@ substep(0).
 	+found(wood,X,Y);
 	.send(F1, tell, found(gold,X,Y));
 	.send(F2, tell, found(gold,X,Y));
-.
-
-+fastAgentIsAt(FAX, FAY) <- 
-	.abolish(fastAgentIsAt(_,_));
-	.abolish(stalkFastAgent(_,_));
-	+stalkFastAgent(FAX,FAY);
 .
 
 +!doMove(_): moves_left(0) <- true.
