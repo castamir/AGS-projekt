@@ -14,7 +14,12 @@ free.
 	+max_visit_points(D).
 
 
-+step(X) <- -move_on;-picking;!inform_friends;!action;!inform_friends;!action;!inform_friends;!action.
++step(X) <- -move_on;-picking.
+
++!start_round <-
+	!inform_friends;!action;
+	!inform_friends;!action;
+	!inform_friends;!action.
 
 
 +!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C)<-

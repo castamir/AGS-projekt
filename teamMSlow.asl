@@ -2,6 +2,8 @@ visibility(3).
 visit_points(0).
 substep(0).
 last_move(blank).
+max_visit_x_point(0).
+max_visit_y_point(0).
 
 // init
 !start.
@@ -15,9 +17,14 @@ last_move(blank).
 	
 
 
-+step(X) <- !inform_friends;!action.
++step(X) <- !start_round.
 
-+!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C) & visit_points(V) <-
++!start_round: middle_agent(Name) <-
+	!inform_friends;!action;
+	.send(Name, achieve, start_round).
++!start_round <- .wait(200);!start_round.
+
++!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C) & visit_points(V) & max_visit_x_point(MVX) & max_visit_y_point(MVY) <-
 	for( .range(CntX,C,GridX-1) ) {
 		for( .range(CntY,C,GridY-1) ) {
 			if( not destination(_,_)) {
@@ -27,14 +34,22 @@ last_move(blank).
 					+destination(A,B);
 					+visited_point(A,B);
 					W = V + 1;
-					-visit_points(V);+visit_points(W)
+					-visit_points(V);+visit_points(W);
+					-max_visit_x_point(MVX);-max_visit_y_point(MVY);
+					.max([MVX,A],NewMVX);.max([MVY,B],NewMVY);
+					+max_visit_x_point(NewMVX);+max_visit_y_point(NewMVY);
 				}
 			}
 		}	
 	}.
 // next direction and its position
 
-+!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
+
++!doMove(left):  substep(S) & pos(PosX, PosY) & ally(PosX-1, PosY) <- do(skip).
++!doMove(up):    substep(S) & pos(PosX, PosY) & ally(PosX, PosY-1) <- do(skip).
++!doMove(right): substep(S) & pos(PosX, PosY) & ally(PosX+1, PosY) <- do(skip).
++!doMove(down):  substep(S) & pos(PosX, PosY) & ally(PosX, PosY+1) <- do(skip).
++!doMove(Direction): substep(S) & pos(PosX, PosY) <-
 	-substep(S); +substep(S + 1);
 	.abolish(last_move(_));
 	+last_move(Direction);
@@ -152,9 +167,9 @@ last_move(blank).
 
 
 //init
-+!action: not middle_agent(_) | not fast_agent(_) <- !action.
++!action: not middle_agent(_) | not fast_agent(_) <- .wait(100);!action.
 
-+!action: visit_points(V) & max_visit_points(V+1) <-
++!action: visit_points(V) & max_visit_points(V) & pos(MVX,VMY) & max_visit_x_point(MVX) & max_visit_y_point(VMY) <-
 	.print("KONEC");
 	do(skip).
 	
@@ -181,7 +196,7 @@ last_move(blank).
 +!action: destination(X,Y) <-
 	!goSomewhere(X,Y).
 
-+!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
+@iflabel[atomic] +!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
 	for( .range(CntX,-C,C) ) {
 		for( .range(CntY,-C,C) ) {
 			if((PosX + CntX >= 0) & (PosY + CntY >= 0) & (PosX + CntX <= GridX) & (PosY + CntY <= GridY)) {
@@ -192,6 +207,7 @@ last_move(blank).
 			}
 		}	
 	}.
++!inform_friends <- .wait(100);!inform_friends.
 
 +gold(X,Y) : friend(F1) & friend(F2) & (F1 \== F2) <-
 	+found(gold,X,Y);

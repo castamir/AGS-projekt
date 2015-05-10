@@ -24,7 +24,13 @@ substep(0).
 	.send(F2, tell, middle_agent(Name));
 . 
 
-+step(X) <- !action; !action.
++step(X) <- true.
+
++!start_round: fast_agent(Name) <-
+	!action;
+	!action;
+	.send(Name, achieve, start_round).
++!start_round <- .wait(200);!start_round.
 
 //init
 +!action: not slow_agent(_) | not fast_agent(_) <- !action.
@@ -37,11 +43,14 @@ substep(0).
 	-just_picked;
 	!action.
 
-+!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & M >= CG+CW<-
++!noop : moves_left(0) <- true.
++!noop : moves_left(N) <- do(skip);!noop.
++!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & moves_per_round(M) <-
+	.print("Drop");
 	do(drop).
-
-+!action: (not carrying_gold(0) | not carrying_wood(0)) & pos(PosX,PosY) & depot(PosX,PosY) & not moves_left(0)<-
-	do(skip).
++!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY)<-
+	.print("Neni dostatek kol na drop");
+	!noop.
 
 +!action: (not carrying_gold(0) | not carrying_wood(0)) & depot(PosX,PosY) & not goSomewhere(_,_) & not moves_left(0) <-
 	+goSomewhere(PosX,PosY);
@@ -100,6 +109,7 @@ substep(0).
 	.send(F2, tell, found(gold,X,Y));
 .
 
++!doMove(_): moves_left(0) <- true.
 +!doMove(Direction): substep(S) & pos(PosX, PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) & visibility(V) <-
 	-substep(S); +substep(S + 1);
 	.abolish(last_move(_));
