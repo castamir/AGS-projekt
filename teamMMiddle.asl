@@ -61,14 +61,12 @@ substep(0).
 	!action.
 
 @atomic4[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY) & moves_left(M) & moves_per_round(M) <-
-	.print("Drop");
 	.abolish(was_on(_,_,_));
 	!do_action(drop).
 @atomic5[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & CG + CW > 0 & pos(PosX,PosY) & depot(PosX,PosY)<-
-	.print("Neni dostatek kol na drop");
 	!noop.
 
-@atomic6[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & carrying_capacity(CC) & CG + CW >= CC - 1 & depot(PosX,PosY) & not goSomewhere(PosX,PosY) & not moves_left(0) <-
+@atomic6[atomic] +!action: carrying_gold(CG) & carrying_wood(CW) & carrying_capacity(CG + CW) & depot(PosX,PosY) & not goSomewhere(PosX,PosY) & not moves_left(0) <-
 	.abolish(goSomewhere(_));
 	+goSomewhere(PosX,PosY);
 	!goSomewhere(PosX,PosY).
@@ -95,13 +93,11 @@ substep(0).
 	-found(wood,PosX,PosY).
 
 @atomic11[atomic] +!action: goSomewhere(DX, DY) & not moves_left(0) <-
-	//.print("aaaaaaaaaaaaa");
 	!goSomewhere(DX,DY);
 	!action;
 .
 	
 @atomic12[atomic] +!action: not goSomewhere(_,_) & nextGoSomewhere(X,Y) <-
-	//.print("qqqqqqqqqqqqqq");
 	-nextGoSomewhere(X,Y);
 	+goSomewhere(X,Y);
 	!goSomewhere(DX,DY);
@@ -109,26 +105,21 @@ substep(0).
 .
 
 +fastPos(FastX,FastY) <-
-	.print("Fast is at [", FastX,",",FastY,"]");
 	+fast_found.
 
 +!action: not moves_left(0) & fast_agent(Name) & not fastPos(_,_) <-
- 	.print("Where are you, Fast?");
  	.send(Name,achieve,middleStalker);
 	-fast_found;
  	!action.
 	
 @atomic14[atomic] +!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) & pos(FastX,FastY) <-
-	.print("Gotcha, Fast...");
 	!noop.
 
 @atomic15[atomic] +!action: not moves_left(0) & fast_agent(Name) & fastPos(FastX,FastY) & not pos(FastX,FastY) <-
-	.print("Stalking Fast...");
 	!goSomewhere(FastX,FastY);
 	!action.
 	
 @atomic16[atomic] +!action: not moves_left(0) <-
-	.print("Idle.");
 	!noop.
 
 +obstacle(X,Y): not(found(obstacle,X,Y)) <-
@@ -199,9 +190,7 @@ substep(0).
 
 +!goToSpecificPoint(X,Y): grid_size(GridX, GridY) & substep(NowStep) & pos(PosX,PosY) 
 	& was_on(PosX,PosY, PrevStep) & was_on(PosX,PosY, PrevPrevStep) & ((NowStep - PrevStep) > 4) 
-	& ((PrevStep - PrevPrevStep) > 4) & ((NowStep - PrevStep) == (PrevStep - PrevPrevStep)) & not(free)  <-
-	.print("SHIT");
-	//!getMovement(X,Y);
+	& ((PrevStep - PrevPrevStep) > 4) & ((NowStep - PrevStep) == (PrevStep - PrevPrevStep)) & not(free) <-
 	if(PosX = (GridX - 1)) { !doMove(left); }
 	if(PosX = 0) {!doMove(right); }
 	if(PosY = (GridY - 1))  { !doMove(up); }
@@ -211,7 +200,6 @@ substep(0).
 +!goToSpecificPoint(_,_): moves_left(0) <- true.
 
 +!goToSpecificPoint(X,Y): pos(X,Y) & step(S) & fast_agent(Name) & (not carrying_gold(0) & not carrying_wood(0)) <-
-	.print("Synchro with fast");
 	SS = S+1;
 	.send(Name, tell, pick_in(SS));
 	-goSomewhere(X, Y);
@@ -219,7 +207,6 @@ substep(0).
 	!action.
 	
 +!goToSpecificPoint(X,Y): pos(X, Y) & (not carrying_gold(0) | not carrying_wood(0)) & depot(DX, DY) & fast_agent(Name) <-
-	.print("Done! Returning to Depot...");
 	.abolish(goSomewhere(X,Y));
 	+goSomewhere(DX, DY);
 	.abolish(was_on(_,_,_));
@@ -231,13 +218,11 @@ substep(0).
 	not(can_go(left)) & not(can_go(right)) & not(can_go(up)) & not(can_go(down)) & not(returning(_)) <-
 	.abolish(returning(_));
 	+returning(Step - 1);
-	.print("I AM STUCK");
 	!goToSpecificPoint(X,Y);
 .
 
 +!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & returning(BackStep) & substep(NowStep) &
 	was_on(GoToX, GoToY, BackStep) & not can_go(left) & not can_go(right) & not can_go(up) & not can_go(down) <-
-	.print("Backtracking...");
 	-returning(BackStep); +returning(BackStep - 1);
 	if(PosX > GoToX) { !doMove(left); }
 	if(PosX < GoToX) { !doMove(right); }
@@ -300,6 +285,6 @@ substep(0).
 +!moveOrder(_,_,_,_): substep(Step) <- .abolish(returning(_)); +returning(Step - 1); !action.
 // ------ END -----
 
-+!update_target(X,Y) : goSomewhere(PosX,PosY) & depot(PosX,PosY) <- +nextGoSomewhere(X,Y) ; .print("OK 1 ---------------------------------- ").
-+!update_target(X,Y) : goSomewhere(PosX,PosY) & fast_agent(Name) <- -goSomewhere(PosX,PosY); +goSomewhere(X,Y); .send(Name, tell, middleAgentComing(X,Y)); .print("OK 2 ---------------------------------- ").
-+!update_target(X,Y) : not goSomewhere(_,_) <- +goSomewhere(X,Y); +free; .print("OK 3 ---------------------------------- ").
++!update_target(X,Y) : goSomewhere(PosX,PosY) & depot(PosX,PosY) <- +nextGoSomewhere(X,Y).
++!update_target(X,Y) : goSomewhere(PosX,PosY) & fast_agent(Name) <- -goSomewhere(PosX,PosY); +goSomewhere(X,Y); .send(Name, tell, middleAgentComing(X,Y)).
++!update_target(X,Y) : not goSomewhere(_,_) <- +goSomewhere(X,Y); +free.
