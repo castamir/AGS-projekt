@@ -17,6 +17,9 @@ free.
 
 +step(X) <- -move_on;-picking.
 
++was_on(_,_,Step1): was_on(_,_,Step2) & ((Step1 - Step2) > 300) <- .abolish(was_on(_,_,_)).
+
+
 +!start_round <-
 	!inform_friends;!action;
 	!inform_friends;!action;
@@ -153,6 +156,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 // jsem v depu a mam suroviny
 +!action : not moves_left(0) & depot(DepX, DepY) & pos(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
 	do(drop);
+	.abolish(was_on(_,_,_));
 	.print("jsem v depu - zasilka vylozena").
 
 +!action : not moves_left(0) & depot(DepX, DepY) & pos(X,Y) & not destination(DepX,DepY) & (not carrying_wood(0) | not carrying_gold(0)) <-
@@ -256,7 +260,6 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 +!goToSpecificPoint(X,Y) : pos(PosX, PosY) & grid_size(GridX, GridY) & returning(BackStep) & substep(NowStep) &
 	was_on(GoToX, GoToY, BackStep) & not can_go(left) & not can_go(right) & not can_go(up) & not can_go(down) <-
 	
-	-substep(NowStep); +substep(NowStep + 1);
 	-returning(BackStep); +returning(BackStep - 1);
 	if(PosX > GoToX) { !doMove(left); }
 	if(PosX < GoToX) { !doMove(right); }
@@ -316,6 +319,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 +!moveOrder(_,D,_,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,D,_): can_go(D) <- !doMove(D).
 +!moveOrder(_,_,_,D): can_go(D) <- !doMove(D).
++!moveOrder(_,_,_,_): substep(Step) <- .abolish(returning(_)); +returning(Step - 1); !action.
 
 +!inform_friends : visibility(C) & pos(PosX,PosY) & friend(F1) & friend(F2) & (F1 \== F2) & grid_size(GridX, GridY) <-
 	for( .range(CntX,-C,C) ) {
