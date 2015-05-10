@@ -22,15 +22,6 @@ free.
 	!inform_friends;!action;
 	!inform_friends;!action.
 
-+substep(1): pos(PosX, PosY) & middle_agent(Name) <-
-	.print("Stalkuj me");	
-	.send(Name, tell, fastAgentIsAt(PosX, PosY));
-.
-+was_on(A,B,X): was_on(C,D,Y) & ((X - Y) = 4) & middle_agent(Name) <-
-	.print("Stalkuj me");	
-	.send(Name, tell, fastAgentIsAt(C,D));
-.
-
 +!find_cell_to_explore : grid_size(GridX, GridY) & pos(PosX,PosY) & visibility(C)<-
 	for( .range(CntX,C,GridX-1) ) {
 		for( .range(CntY,C,GridY-1) ) {
@@ -337,3 +328,7 @@ find_nearest_wood(D,PosX,PosY,X,Y) :- found(wood,X,Y) & calc_distance(PosX,PosY,
 	+found(wood,X,Y);
 	.send(F1, tell, found(wood,X,Y));
 	.send(F2, tell, found(wood,X,Y)).
+	
++!middleStalker: middle_agent(Name) & pos(PosX,PosY) <-
+	.send(Name,tell,fastPos(PosX,PosY));
+.
